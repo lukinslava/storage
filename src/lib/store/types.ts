@@ -29,6 +29,7 @@ export interface Store {
 
   /** Запускает построение 3D-модели из фото поделки. */
   start3D(id: string): Promise<Artwork>
-  /** Проверяет, готова ли модель; когда готова — сохраняет её в хранилище. */
-  check3D(id: string): Promise<Artwork>
+  /** Проверяет, готова ли модель; когда готова — сохраняет её в хранилище.
+   *  progress — готовность в процентах, пока модель строится. */
+  check3D(id: string): Promise<{ artwork: Artwork; progress?: number }>
 }

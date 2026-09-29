@@ -1,0 +1,61 @@
+name: 3D models (Supabase function)
+
+# Проверяет и публикует функцию generate-3d, которая строит 3D-модели поделок через Meshy.
+# Нужны два секрета в Settings → Secrets and variables → Actions → Secrets:
+#   SUPABASE_ACCESS_TOKEN — токен Supabase (supabase.com/dashboard/account/tokens)
+#   MESHY_API_KEY         — ключ Meshy (meshy.ai → Settings → API)
+# Без них workflow только проверяет код и связку с Meshy на тестовом ключе.
+
+on:
+  push:
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-3d.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_REF: xluymkhepmzbokgrmjtq
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type check
+        run: deno check supabase/functions/generate-3d/index.ts
+      - name: Meshy smoke test (test key, no credits)
+        run: deno run --allow-net supabase/functions/generate-3d/smoke.ts
+
+  deploy:
+    needs: check
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        run: |
+          missing=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ -n "$MESHY_API_KEY" ] || missing="$missing MESHY_API_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Не заданы секреты:$missing (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+      - name: Check Meshy key
+        run: |
+          code=$(curl -s -o balance.json -w '%{http_code}' -H "Authorization: Bearer $MESHY_API_KEY" https://api.meshy.ai/openapi/v1/balance)
+          if [ "$code" != 200 ]; then echo "::error::Meshy не принял ключ (HTTP $code)"; cat balance.json; exit 1; fi
+          echo "Кредитов Meshy: $(jq -r .balance balance.json)"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Set secret and deploy
+        run: |
+          supabase secrets set --project-ref "$PROJECT_REF" MESHY_API_KEY="$MESHY_API_KEY"
+          supabase functions deploy generate-3d --project-ref "$PROJECT_REF" --no-verify-jwt

@@ -51,14 +51,16 @@ npm run build    # сборка в dist/
 3D-модели строит сервис [Meshy](https://www.meshy.ai) (Multi-Image to 3D, от 1 до 4 фото). API-ключ хранится только на сервере, в Supabase Edge Function, и в приложение не попадает.
 
 1. Получите API-ключ в Meshy: Settings → API. Сервис платный и тратит кредиты на каждую модель.
-2. Установите [Supabase CLI](https://supabase.com/docs/guides/cli) и выполните:
+2. Получите токен Supabase: https://supabase.com/dashboard/account/tokens → **Generate new token**.
+3. Добавьте оба значения в GitHub: **Settings → Secrets and variables → Actions → New repository secret**, с именами `MESHY_API_KEY` и `SUPABASE_ACCESS_TOKEN`.
+4. Запустите workflow **3D models (Supabase function)** во вкладке **Actions** (кнопка *Run workflow*). Он проверит ключ Meshy, сохранит его в Supabase и опубликует функцию `generate-3d`. Дальше функция публикуется сама при каждом её изменении.
+
+   То же самое вручную через [Supabase CLI](https://supabase.com/docs/guides/cli):
    ```bash
-   supabase login
-   supabase link --project-ref <id-проекта>
-   supabase secrets set MESHY_API_KEY=msy_...
-   supabase functions deploy generate-3d
+   supabase secrets set --project-ref <id-проекта> MESHY_API_KEY=msy_...
+   supabase functions deploy generate-3d --project-ref <id-проекта> --no-verify-jwt
    ```
-3. Дальше при сохранении поделки отметьте «Создать 3D-модель». Модель строится несколько минут. Приложение само проверяет готовность и сохраняет `.glb` в ваше хранилище.
+5. Дальше при сохранении поделки отметьте «Создать 3D-модель». Модель строится несколько минут. Приложение само проверяет готовность и сохраняет `.glb` в ваше хранилище.
 
 Для проверки без трат у Meshy есть тестовый ключ `msy_dummy_api_key_for_test_mode_12345678`: он возвращает готовую демо-модель.
 

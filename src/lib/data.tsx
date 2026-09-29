@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { store, type Snapshot } from './store'
 import type { Artwork } from './types'
 
@@ -8,9 +8,14 @@ interface DataContext extends Snapshot {
   reload: () => Promise<void>
   /** Обновить одну работу в памяти (например, после проверки 3D). */
   putArtwork: (a: Artwork) => void
+  /** Готовность 3D-модели в процентах, по id работы. */
+  progress3D: Record<string, number>
 }
 
 const Ctx = createContext<DataContext | null>(null)
+
+/** Как часто спрашивать сервер, готова ли модель. */
+const POLL_MS = 10_000
 
 const EMPTY: Snapshot = { children: [], collections: [], artworks: [] }
 
@@ -22,7 +27,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [snap, setSnap] = useState<Snapshot>(EMPTY)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const pinged = useRef(new Set<string>())
+  const [progress3D, setProgress3D] = useState<Record<string, number>>({})
 
   const reload = useCallback(async () => {
     try {
@@ -44,17 +49,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
     void reload()
   }, [reload])
 
-  // Модели, которые строились, пока приложение было закрыто: разово проверяем их.
+  // Пока хоть одна модель строится, спрашиваем сервер о готовности. Опрос общий для всего
+  // приложения, поэтому модель дойдёт до конца, даже если уйти с этой работы на другой экран.
+  const building = snap.artworks
+    .filter((a) => a.model_status === 'processing')
+    .map((a) => a.id)
+    .join(',')
   useEffect(() => {
-    if (!store.can3D) return
-    for (const a of snap.artworks) {
-      if (a.model_status !== 'processing' || pinged.current.has(a.id)) continue
-      pinged.current.add(a.id)
-      store.check3D(a.id).then(putArtwork, () => {})
+    if (!store.can3D || !building) return
+    let alive = true
+    const tick = () => {
+      for (const id of building.split(',')) {
+        store.check3D(id).then(({ artwork, progress }) => {
+          if (!alive) return
+          putArtwork(artwork)
+          setProgress3D((p) => ({ ...p, [id]: artwork.model_status === 'processing' ? (progress ?? p[id] ?? 0) : 100 }))
+        }, () => {})
+      }
     }
-  }, [snap.artworks, putArtwork])
+    tick()
+    const t = setInterval(tick, POLL_MS)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [building, putArtwork])
 
-  const value = useMemo(() => ({ ...snap, loading, error, reload, putArtwork }), [snap, loading, error, reload, putArtwork])
+  const value = useMemo(
+    () => ({ ...snap, loading, error, reload, putArtwork, progress3D }),
+    [snap, loading, error, reload, putArtwork, progress3D],
+  )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

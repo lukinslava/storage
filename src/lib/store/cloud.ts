@@ -21,8 +21,8 @@ export function createCloudStore(sb: SupabaseClient): Store {
     if (error) throw new Error(error.message)
   }
 
-  async function invoke3D(action: 'start' | 'status', id: string): Promise<Artwork> {
-    const { data, error } = await sb.functions.invoke<{ artwork?: Artwork; error?: string }>('generate-3d', {
+  async function invoke3D(action: 'start' | 'status', id: string): Promise<{ artwork: Artwork; progress?: number }> {
+    const { data, error } = await sb.functions.invoke<{ artwork?: Artwork; progress?: number; error?: string }>('generate-3d', {
       body: { action, artworkId: id },
     })
     if (error) {
@@ -37,7 +37,7 @@ export function createCloudStore(sb: SupabaseClient): Store {
       throw new Error(message)
     }
     if (!data?.artwork) throw new Error(data?.error ?? 'Пустой ответ сервера')
-    return data.artwork
+    return { artwork: data.artwork, progress: data.progress }
   }
 
   return {
@@ -120,7 +120,7 @@ export function createCloudStore(sb: SupabaseClient): Store {
       return data.signedUrl
     },
 
-    start3D: (id) => invoke3D('start', id),
+    start3D: async (id) => (await invoke3D('start', id)).artwork,
     check3D: (id) => invoke3D('status', id),
   }
 }

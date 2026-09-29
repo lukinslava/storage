@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArtworkForm } from '../components/ArtworkForm'
 import { Framed } from '../components/Framed'
@@ -10,7 +10,6 @@ import { formatDate } from '../lib/format'
 import { store } from '../lib/store'
 import type { Artwork } from '../lib/types'
 
-const POLL_MS = 10_000
 
 function Photo({ path, alt }: { path: string; alt: string }) {
   const url = useFileUrl(path)
@@ -18,18 +17,11 @@ function Photo({ path, alt }: { path: string; alt: string }) {
 }
 
 function Model3D({ art }: { art: Artwork }) {
-  const { putArtwork } = useData()
+  // Готовность спрашивает DataProvider: опрос общий, чтобы модель дошла до конца,
+  // даже если уйти с этого экрана.
+  const { putArtwork, progress3D } = useData()
   const [error, setError] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
-
-  // Пока модель строится — периодически спрашиваем сервер.
-  useEffect(() => {
-    if (art.model_status !== 'processing') return
-    const t = setInterval(() => {
-      store.check3D(art.id).then(putArtwork, (e) => setError(String(e?.message ?? e)))
-    }, POLL_MS)
-    return () => clearInterval(t)
-  }, [art.id, art.model_status, putArtwork])
 
   const start = async () => {
     setStarting(true)
@@ -47,9 +39,14 @@ function Model3D({ art }: { art: Artwork }) {
     return <p className="note">3D-модели появятся, когда будет подключено облако (см. Настройки).</p>
   }
   if (art.model_status === 'processing') {
+    const percent = progress3D[art.id] ?? 0
     return (
       <div className="note note--busy">
-        <span className="spinner" /> 3D-модель создаётся. Обычно это занимает 2–5 минут.
+        <span className="spinner" />
+        <span>
+          3D-модель создаётся{percent > 0 ? `, готова на ${percent}%` : ''}. Обычно это занимает 2–5 минут. Можно уйти с
+          этого экрана, модель достроится сама.
+        </span>
       </div>
     )
   }

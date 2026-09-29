@@ -7,10 +7,11 @@
 //
 // Секрет: MESHY_API_KEY (supabase secrets set MESHY_API_KEY=...).
 // Работает от имени вошедшего пользователя, поэтому действуют те же права (RLS), что и в приложении.
+// Деплоится с --no-verify-jwt (шлюз не понимает новые ключи подписи), вход проверяется здесь.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { isFinalFailure, meshyClient } from './meshy.ts'
 
-const MESHY = 'https://api.meshy.ai/openapi/v1/multi-image-to-3d'
 const BUCKET = 'art'
 
 const cors = {
@@ -29,9 +30,15 @@ Deno.serve(async (req) => {
   const key = Deno.env.get('MESHY_API_KEY')
   if (!key) return json({ error: 'На сервере не задан MESHY_API_KEY' }, 500)
 
-  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+  // Ключ берём тот же, с которым пришло приложение (publishable), а старый anon — запасной вариант.
+  const apiKey = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY')!
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, apiKey, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
+    auth: { persistSession: false },
   })
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
+  const { data: user } = await sb.auth.getUser(token)
+  if (!user?.user) return json({ error: 'Нужно войти в приложение' }, 401)
 
   let action: string, artworkId: string
   try {
@@ -51,37 +58,21 @@ Deno.serve(async (req) => {
     return data
   }
 
-  const meshy = (path: string, init?: RequestInit) =>
-    fetch(MESHY + path, {
-      ...init,
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...init?.headers },
-    })
+  const meshy = meshyClient(key)
 
   try {
     if (action === 'start') {
       const photos: string[] = (art.photo_paths?.length ? art.photo_paths : [art.image_path]).slice(0, 4)
       const { data: signed, error: signError } = await sb.storage.from(BUCKET).createSignedUrls(photos, 60 * 60)
       if (signError) throw new Error(signError.message)
-      const res = await meshy('', {
-        method: 'POST',
-        body: JSON.stringify({
-          image_urls: signed.map((s) => s.signedUrl),
-          should_texture: true,
-          should_remesh: true,
-          enable_pbr: false,
-        }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok || !body.result) throw new Error(body.message ?? `Meshy ответил ${res.status}`)
-      const artwork = await update({ model_status: 'processing', model_task_id: body.result, model_error: null })
+      const taskId = await meshy.start(signed.map((s) => s.signedUrl))
+      const artwork = await update({ model_status: 'processing', model_task_id: taskId, model_error: null })
       return json({ artwork })
     }
 
     if (action === 'status') {
       if (art.model_status !== 'processing' || !art.model_task_id) return json({ artwork: art })
-      const res = await meshy(`/${art.model_task_id}`)
-      const task = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(task.message ?? `Meshy ответил ${res.status}`)
+      const task = await meshy.task(art.model_task_id)
 
       if (task.status === 'SUCCEEDED') {
         const glbUrl = task.model_urls?.glb
@@ -95,7 +86,7 @@ Deno.serve(async (req) => {
         if (upError) throw new Error(upError.message)
         return json({ artwork: await update({ model_status: 'ready', model_path: path, model_error: null }) })
       }
-      if (['FAILED', 'CANCELED', 'EXPIRED'].includes(task.status)) {
+      if (isFinalFailure(task)) {
         const reason = task.task_error?.message || task.status
         return json({ artwork: await update({ model_status: 'failed', model_error: reason }) })
       }
