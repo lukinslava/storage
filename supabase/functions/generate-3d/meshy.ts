@@ -3,9 +3,6 @@
 
 export const MESHY = 'https://api.meshy.ai/openapi/v1/multi-image-to-3d'
 
-/** Тестовый ключ Meshy: возвращает демо-модель и не тратит кредиты. */
-export const MESHY_TEST_KEY = 'msy_dummy_api_key_for_test_mode_12345678'
-
 export type MeshyTask = {
   id: string
   status: 'PENDING' | 'IN_PROGRESS' | 'SUCCEEDED' | 'FAILED' | 'CANCELED' | 'EXPIRED'

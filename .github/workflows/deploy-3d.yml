@@ -4,7 +4,7 @@ name: 3D models (Supabase function)
 # Нужны два секрета в Settings → Secrets and variables → Actions → Secrets:
 #   SUPABASE_ACCESS_TOKEN — токен Supabase (supabase.com/dashboard/account/tokens)
 #   MESHY_API_KEY         — ключ Meshy (meshy.ai → Settings → API)
-# Без них workflow только проверяет код и связку с Meshy на тестовом ключе.
+# Без них workflow только проверяет код.
 
 on:
   push:
@@ -19,6 +19,8 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: denoland/setup-deno@v2
@@ -26,8 +28,9 @@ jobs:
           deno-version: v2.x
       - name: Type check
         run: deno check --node-modules-dir=none supabase/functions/generate-3d/index.ts
-      - name: Meshy smoke test (test key, no credits)
-        run: deno run --allow-net supabase/functions/generate-3d/smoke.ts
+      - name: Meshy smoke test (только если задан ключ; тратит кредиты на одну модель)
+        if: ${{ github.event_name == 'workflow_dispatch' && env.MESHY_API_KEY != '' }}
+        run: deno run --allow-net --allow-env supabase/functions/generate-3d/smoke.ts
 
   deploy:
     needs: check
