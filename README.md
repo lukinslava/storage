@@ -17,7 +17,7 @@
 | Нужна настройка | нет | да, см. ниже |
 | 3D-модели | нет | да (через Meshy) |
 
-Если переменные `VITE_SUPABASE_*` не заданы, приложение работает в локальном режиме. Так удобно попробовать, но при очистке данных Safari всё пропадёт.
+По умолчанию приложение подключено к семейному проекту Supabase (`src/lib/store/index.ts`). Для локального режима запустите с `VITE_SUPABASE_URL=local`, например `VITE_SUPABASE_URL=local npm run dev`. В этом режиме при очистке данных Safari всё пропадёт.
 
 ## Запуск на компьютере
 
@@ -40,7 +40,7 @@ npm run build    # сборка в dist/
    insert into public.family (email) values ('mama@example.com'), ('papa@example.com');
    ```
    Доступ есть только у почт из таблицы `family`. Для надёжности выключите регистрацию: **Authentication → Sign In / Providers → Allow new users to sign up**.
-5. Скопируйте **Project URL** и **anon / publishable key** (Project Settings → API) в файл `.env.local`, взяв за образец `.env.example`:
+5. Адрес и publishable key уже прописаны в `src/lib/store/index.ts`. Для другого проекта задайте их в `.env.local`, взяв за образец `.env.example`:
    ```
    VITE_SUPABASE_URL=https://xxxx.supabase.co
    VITE_SUPABASE_ANON_KEY=...
@@ -66,10 +66,10 @@ npm run build    # сборка в dist/
 
 ## Публикация на GitHub Pages
 
-В репозитории уже есть workflow `.github/workflows/deploy.yml`. Он собирает и публикует приложение при каждом пуше в `main`.
+В репозитории уже есть workflow `.github/workflows/deploy.yml`. Он собирает и публикует приложение при каждом пуше в основную ветку.
 
 1. **Settings → Pages → Source:** выберите *GitHub Actions*.
-2. Для облачного режима зайдите в **Settings → Secrets and variables → Actions → Variables** и добавьте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`. Anon-ключ публичный по замыслу Supabase: данные защищены входом и правилами доступа.
+2. Настраивать переменные не нужно: адрес Supabase уже в коде. Для другого проекта задайте `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY` в **Settings → Secrets and variables → Actions → Variables**.
 3. Приложение откроется по адресу `https://<логин>.github.io/storage/`.
 
 Для приватного репозитория GitHub Pages доступен только на платных тарифах. Альтернатива: Vercel или Netlify. Там импортируйте репозиторий и задайте те же две переменные.
