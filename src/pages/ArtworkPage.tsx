@@ -4,7 +4,7 @@ import { ArtworkForm } from '../components/ArtworkForm'
 import { Framed } from '../components/Framed'
 import { BackIcon, CubeIcon, EditIcon, TrashIcon } from '../components/Icons'
 import { ModelView } from '../components/ModelView'
-import { Sheet } from '../components/Sheet'
+import { ConfirmSheet, Sheet } from '../components/Sheet'
 import { useData, useFileUrl } from '../lib/data'
 import { formatDate } from '../lib/format'
 import { store } from '../lib/store'
@@ -71,6 +71,7 @@ export function ArtworkPage() {
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [view, setView] = useState<'3d' | 'photos'>('3d')
   const art = artworks.find((a) => a.id === id)
   const posterUrl = useFileUrl(art?.kind === 'craft' ? art.thumb_path : null)
@@ -91,7 +92,6 @@ export function ArtworkPage() {
   const has3D = art.kind === 'craft' && art.model_status === 'ready' && art.model_path
 
   const remove = async () => {
-    if (!confirm(`Удалить «${title}» из музея? Это нельзя отменить.`)) return
     setBusy(true)
     await store.deleteArtwork(art)
     await reload()
@@ -108,7 +108,7 @@ export function ArtworkPage() {
           <button className="icon-btn icon-btn--soft" onClick={() => setEditing(true)} aria-label="Изменить">
             <EditIcon width={20} height={20} />
           </button>
-          <button className="icon-btn icon-btn--soft" onClick={remove} disabled={busy} aria-label="Удалить">
+          <button className="icon-btn icon-btn--soft" onClick={() => setConfirming(true)} disabled={busy} aria-label="Удалить">
             <TrashIcon width={20} height={20} />
           </button>
         </div>
@@ -157,6 +157,16 @@ export function ArtworkPage() {
         <p className="muted small">Добавлено {formatDate(art.created_at)}</p>
         {art.kind === 'craft' && <Model3D art={art} />}
       </div>
+
+      {confirming && (
+        <ConfirmSheet
+          title="Удалить работу?"
+          text={`«${title}» пропадёт из музея вместе с фото. Это нельзя отменить.`}
+          action="Удалить"
+          onConfirm={remove}
+          onClose={() => setConfirming(false)}
+        />
+      )}
 
       {editing && (
         <Sheet title="Изменить" onClose={() => setEditing(false)}>

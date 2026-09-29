@@ -124,6 +124,7 @@ img { display: block; }
 }
 
 .btn--ghost { background: var(--soft); color: var(--ink); }
+.btn--danger { background: var(--danger); color: #fff; }
 .btn--wide { width: 100%; }
 
 .icon-btn {

@@ -22,3 +22,32 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
     </div>
   )
 }
+
+/** Подтверждение опасного действия (вместо window.confirm, который не везде работает). */
+export function ConfirmSheet({
+  title,
+  text,
+  action,
+  onConfirm,
+  onClose,
+}: {
+  title: string
+  text: string
+  action: string
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  return (
+    <Sheet title={title} onClose={onClose}>
+      <div className="form">
+        <p>{text}</p>
+        <button className="btn btn--danger btn--wide" onClick={onConfirm}>
+          {action}
+        </button>
+        <button className="btn btn--ghost btn--wide" onClick={onClose}>
+          Отмена
+        </button>
+      </div>
+    </Sheet>
+  )
+}

@@ -4,11 +4,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // BASE_PATH задаётся в GitHub Actions ("/storage/") для GitHub Pages.
 const base = process.env.BASE_PATH ?? '/'
+// Сборка без сервис-воркера — для просмотра по ссылке в Claude (там он недоступен).
+const pwa = process.env.NO_PWA !== '1'
 
 export default defineConfig({
   base,
   plugins: [
     react(),
+    pwa &&
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['apple-touch-icon.png', 'favicon.svg'],

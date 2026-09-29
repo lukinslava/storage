@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArtGrid } from '../components/ArtGrid'
 import { BackIcon, EditIcon, TrashIcon } from '../components/Icons'
+import { ConfirmSheet } from '../components/Sheet'
 import { useData } from '../lib/data'
 import { store } from '../lib/store'
 import { CollectionSheet } from './Collections'
@@ -12,6 +13,7 @@ export function CollectionPage() {
   const { collections, artworks, reload, loading } = useData()
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const collection = collections.find((c) => c.id === id)
   const list = artworks.filter((a) => a.collection_id === id)
 
@@ -26,7 +28,6 @@ export function CollectionPage() {
   }
 
   const remove = async () => {
-    if (!confirm(`Удалить коллекцию «${collection.name}»? Работы останутся в музее.`)) return
     await store.deleteCollection(collection.id)
     await reload()
     navigate('/collections')
@@ -42,7 +43,7 @@ export function CollectionPage() {
           <button className="icon-btn icon-btn--soft" onClick={() => setEditing(true)} aria-label="Изменить">
             <EditIcon width={20} height={20} />
           </button>
-          <button className="icon-btn icon-btn--soft" onClick={remove} aria-label="Удалить">
+          <button className="icon-btn icon-btn--soft" onClick={() => setConfirming(true)} aria-label="Удалить">
             <TrashIcon width={20} height={20} />
           </button>
         </div>
@@ -55,6 +56,15 @@ export function CollectionPage() {
         <ArtGrid artworks={list} />
       ) : (
         <p className="muted empty-note">Пока пусто. Выберите эту коллекцию, когда будете добавлять работу.</p>
+      )}
+      {confirming && (
+        <ConfirmSheet
+          title="Удалить коллекцию?"
+          text={`Коллекция «${collection.name}» исчезнет, а работы из неё останутся в музее.`}
+          action="Удалить коллекцию"
+          onConfirm={remove}
+          onClose={() => setConfirming(false)}
+        />
       )}
       {editing && <CollectionSheet initial={collection} onClose={() => setEditing(false)} />}
     </div>
