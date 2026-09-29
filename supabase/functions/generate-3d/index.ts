@@ -65,7 +65,10 @@ Deno.serve(async (req) => {
       const photos: string[] = (art.photo_paths?.length ? art.photo_paths : [art.image_path]).slice(0, 4)
       const { data: signed, error: signError } = await sb.storage.from(BUCKET).createSignedUrls(photos, 60 * 60)
       if (signError) throw new Error(signError.message)
-      const taskId = await meshy.start(signed.map((s) => s.signedUrl))
+      // Ссылка на файл может не получиться (файл удалили): с такой Meshy молча вернёт брак.
+      const urls = signed.map((s) => s.signedUrl).filter((u): u is string => !!u)
+      if (urls.length < photos.length) throw new Error('Не удалось прочитать фото поделки')
+      const taskId = await meshy.start(urls)
       const artwork = await update({ model_status: 'processing', model_task_id: taskId, model_error: null })
       return json({ artwork })
     }
