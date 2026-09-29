@@ -4,12 +4,15 @@ import { ArtworkForm } from '../components/ArtworkForm'
 import { Framed } from '../components/Framed'
 import { BackIcon, CubeIcon, EditIcon, TrashIcon } from '../components/Icons'
 import { ModelView } from '../components/ModelView'
+import { Spin, SPIN_MIN } from '../components/Spin'
 import { ConfirmSheet, Sheet } from '../components/Sheet'
 import { useData, useFileUrl } from '../lib/data'
 import { formatDate } from '../lib/format'
 import { store } from '../lib/store'
 import type { Artwork } from '../lib/types'
 
+
+const VIEW_LABELS = { '3d': '3D', spin: 'Вращать', photos: 'Фото' }
 
 function Photo({ path, alt }: { path: string; alt: string }) {
   const url = useFileUrl(path)
@@ -35,9 +38,7 @@ function Model3D({ art }: { art: Artwork }) {
     }
   }
 
-  if (!store.can3D) {
-    return <p className="note">3D-модели появятся, когда будет подключено облако (см. Настройки).</p>
-  }
+  if (!store.can3D) return null
   if (art.model_status === 'processing') {
     const percent = progress3D[art.id] ?? 0
     return (
@@ -69,7 +70,7 @@ export function ArtworkPage() {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const [view, setView] = useState<'3d' | 'photos'>('3d')
+  const [view, setView] = useState<'3d' | 'spin' | 'photos'>('3d')
   const art = artworks.find((a) => a.id === id)
   const posterUrl = useFileUrl(art?.kind === 'craft' ? art.thumb_path : null)
 
@@ -86,7 +87,10 @@ export function ArtworkPage() {
   const child = children.find((c) => c.id === art.child_id)
   const collection = collections.find((c) => c.id === art.collection_id)
   const title = art.title || (art.kind === 'drawing' ? 'Без названия' : 'Поделка')
-  const has3D = art.kind === 'craft' && art.model_status === 'ready' && art.model_path
+  const has3D = art.kind === 'craft' && art.model_status === 'ready' && !!art.model_path
+  const canSpin = art.kind === 'craft' && art.photo_paths.length >= SPIN_MIN
+  const views = [has3D && '3d', canSpin && 'spin', 'photos'].filter(Boolean) as (typeof view)[]
+  const shown = views.includes(view) ? view : views[0]
 
   const remove = async () => {
     setBusy(true)
@@ -117,18 +121,19 @@ export function ArtworkPage() {
         </div>
       ) : (
         <>
-          {has3D && (
+          {views.length > 1 && (
             <div className="segmented segmented--small">
-              <button className={'seg' + (view === '3d' ? ' seg--on' : '')} onClick={() => setView('3d')}>
-                3D
-              </button>
-              <button className={'seg' + (view === 'photos' ? ' seg--on' : '')} onClick={() => setView('photos')}>
-                Фото
-              </button>
+              {views.map((v) => (
+                <button key={v} className={'seg' + (shown === v ? ' seg--on' : '')} onClick={() => setView(v)}>
+                  {VIEW_LABELS[v]}
+                </button>
+              ))}
             </div>
           )}
-          {has3D && view === '3d' ? (
+          {shown === '3d' ? (
             <ModelView path={art.model_path!} poster={posterUrl} alt={title} />
+          ) : shown === 'spin' ? (
+            <Spin paths={art.photo_paths} alt={title} />
           ) : (
             <div className="photos">
               {(art.photo_paths.length ? art.photo_paths : [art.image_path]).map((p, i) => (

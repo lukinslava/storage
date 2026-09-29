@@ -1,9 +1,10 @@
 name: 3D models (Supabase function)
 
-# Проверяет и публикует функцию generate-3d, которая строит 3D-модели поделок через Meshy.
-# Нужны два секрета в Settings → Secrets and variables → Actions → Secrets:
+# Проверяет и публикует функцию generate-3d, которая строит 3D-модели поделок.
+# Нужны секреты в Settings → Secrets and variables → Actions → Secrets:
 #   SUPABASE_ACCESS_TOKEN — токен Supabase (supabase.com/dashboard/account/tokens)
-#   MESHY_API_KEY         — ключ Meshy (meshy.ai → Settings → API)
+#   TRIPO_API_KEY         — ключ Tripo (developers.tripo3d.ai → API Keys)
+#   MESHY_API_KEY         — вместо Tripo можно ключ Meshy; если заданы оба, берётся Tripo
 # Без них workflow только проверяет код.
 
 on:
@@ -20,6 +21,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
+      TRIPO_API_KEY: ${{ secrets.TRIPO_API_KEY }}
       MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +30,10 @@ jobs:
           deno-version: v2.x
       - name: Type check
         run: deno check --node-modules-dir=none supabase/functions/generate-3d/index.ts
-      - name: Meshy smoke test (только если задан ключ; тратит кредиты на одну модель)
-        if: ${{ github.event_name == 'workflow_dispatch' && env.MESHY_API_KEY != '' }}
+      - name: Unit tests
+        run: deno test --node-modules-dir=none supabase/functions/generate-3d/
+      - name: Smoke test (ручной запуск с ключом; тратит кредиты на одну модель)
+        if: ${{ github.event_name == 'workflow_dispatch' && (env.TRIPO_API_KEY != '' || env.MESHY_API_KEY != '') }}
         run: deno run --allow-net --allow-env supabase/functions/generate-3d/smoke.ts
 
   deploy:
@@ -38,27 +42,30 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TRIPO_API_KEY: ${{ secrets.TRIPO_API_KEY }}
       MESHY_API_KEY: ${{ secrets.MESHY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+      # Без ключей публиковать нечего. При ручном запуске это ошибка, а при обычном пуше —
+      # только предупреждение, чтобы ветка не краснела, пока ключи не добавлены.
       - name: Check secrets
+        id: secrets
         run: |
           missing=""
-          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
-          [ -n "$MESHY_API_KEY" ] || missing="$missing MESHY_API_KEY"
-          if [ -n "$missing" ]; then
-            echo "::error::Не заданы секреты:$missing (Settings → Secrets and variables → Actions)"
-            exit 1
-          fi
-      - name: Check Meshy key
-        run: |
-          code=$(curl -s -o balance.json -w '%{http_code}' -H "Authorization: Bearer $MESHY_API_KEY" https://api.meshy.ai/openapi/v1/balance)
-          if [ "$code" != 200 ]; then echo "::error::Meshy не принял ключ (HTTP $code)"; cat balance.json; exit 1; fi
-          echo "Кредитов Meshy: $(jq -r .balance balance.json)"
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="SUPABASE_ACCESS_TOKEN"
+          [ -n "$TRIPO_API_KEY$MESHY_API_KEY" ] || missing="$missing TRIPO_API_KEY"
+          if [ -z "$missing" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          msg="Не заданы секреты: $missing (Settings → Secrets and variables → Actions)"
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then echo "::error::$msg"; exit 1; fi
+          echo "::warning::$msg. Функция не опубликована."
       - uses: supabase/setup-cli@v1
+        if: steps.secrets.outputs.ok == 'true'
         with:
           version: latest
-      - name: Set secret and deploy
+      - name: Set secrets and deploy
+        if: steps.secrets.outputs.ok == 'true'
         run: |
-          supabase secrets set --project-ref "$PROJECT_REF" MESHY_API_KEY="$MESHY_API_KEY"
-          supabase functions deploy generate-3d --project-ref "$PROJECT_REF" --no-verify-jwt
+          set -- --project-ref "$PROJECT_REF"
+          if [ -n "$TRIPO_API_KEY" ]; then supabase secrets set "$@" TRIPO_API_KEY="$TRIPO_API_KEY"; fi
+          if [ -n "$MESHY_API_KEY" ]; then supabase secrets set "$@" MESHY_API_KEY="$MESHY_API_KEY"; fi
+          supabase functions deploy generate-3d "$@" --no-verify-jwt

@@ -42,8 +42,9 @@ interface Shot {
   preview: string
 }
 
-const SIDES = ['Спереди', 'Сбоку', 'Сзади', 'С другой стороны']
-const MAX_PHOTOS = 8
+/** Подпись кадра поделки: съёмку начинают спереди и идут по кругу. */
+const shotLabel = (i: number) => (i === 0 ? 'Спереди' : `Кадр ${i + 1}`)
+const MAX_PHOTOS = 16
 
 export function Scan() {
   const [step, setStep] = useState<Step>({ k: 'choose' })
@@ -198,7 +199,7 @@ export function Scan() {
               <CubeIcon width={36} height={36} />
               <h2>Поделка</h2>
               <p>
-                Сфотографируйте её с нескольких сторон.
+                Сфотографируйте её по кругу, и её можно будет крутить пальцем.
                 {store.can3D ? ' Из фото получится 3D-модель.' : ''}
               </p>
               <div className="choose__actions">
@@ -312,14 +313,15 @@ export function Scan() {
         <div className="stack">
           <h2 className="step-title">Фото со всех сторон</h2>
           <p className="muted">
-            Поставьте поделку на однотонный фон и снимите её со всех сторон при хорошем свете.
-            {store.can3D ? ' Для 3D используются первые 4 фото.' : ''}
+            Поставьте поделку на однотонный фон. Начните спереди и обходите её вправо по кругу, делая снимок примерно
+            каждые 30°, на одной высоте и расстоянии. Из 8–12 кадров поделку можно будет крутить пальцем.
+            {store.can3D ? ' Для 3D из них выберутся четыре ракурса: спереди, слева, сзади и справа.' : ''}
           </p>
           <div className="shots">
             {shots.map((s, i) => (
               <div key={i} className="shot">
-                <img src={s.preview} alt={SIDES[i] ?? `Фото ${i + 1}`} />
-                <span className="shot__label">{SIDES[i] ?? `Фото ${i + 1}`}</span>
+                <img src={s.preview} alt={shotLabel(i)} />
+                <span className="shot__label">{shotLabel(i)}</span>
                 <button
                   className="shot__remove"
                   onClick={() => setShots((list) => list.filter((_, j) => j !== i))}
@@ -332,7 +334,7 @@ export function Scan() {
             {shots.length < MAX_PHOTOS && (
               <button className="shot shot--add" onClick={() => craftInput.current?.click()} disabled={!!busy}>
                 <PlusIcon width={28} height={28} />
-                <span>{SIDES[shots.length] ?? 'Ещё фото'}</span>
+                <span>{shotLabel(shots.length)}</span>
               </button>
             )}
           </div>

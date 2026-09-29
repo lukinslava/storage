@@ -1,16 +1,17 @@
-// Supabase Edge Function: 3D-модель поделки из её фото через Meshy (Multi-Image to 3D).
+// Supabase Edge Function: 3D-модель поделки из её фото через Tripo или Meshy.
 //
 // POST { action: 'start' | 'status', artworkId: string }
-//   start  — отправляет до 4 фото поделки в Meshy и помечает работу как processing;
-//   status — спрашивает Meshy о готовности; когда модель готова, скачивает .glb
-//            в хранилище (ссылки Meshy со временем протухают) и помечает работу ready.
+//   start  — отправляет 4 фото поделки (спереди, слева, сзади, справа) в сервис
+//            и помечает работу как processing;
+//   status — спрашивает сервис о готовности; когда модель готова, скачивает .glb
+//            в хранилище (ссылки сервиса со временем протухают) и помечает работу ready.
 //
-// Секрет: MESHY_API_KEY (supabase secrets set MESHY_API_KEY=...).
+// Секрет: TRIPO_API_KEY или MESHY_API_KEY (supabase secrets set ...), см. providers.ts.
 // Работает от имени вошедшего пользователя, поэтому действуют те же права (RLS), что и в приложении.
 // Деплоится с --no-verify-jwt (шлюз не понимает новые ключи подписи), вход проверяется здесь.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { isFinalFailure, meshyClient } from './meshy.ts'
+import { pickProvider, pickViews } from './providers.ts'
 
 const BUCKET = 'art'
 
@@ -27,8 +28,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Только POST' }, 405)
 
-  const key = Deno.env.get('MESHY_API_KEY')
-  if (!key) return json({ error: 'На сервере не задан MESHY_API_KEY' }, 500)
+  const provider = pickProvider((name) => Deno.env.get(name))
+  if (!provider) return json({ error: 'На сервере не задан ключ сервиса 3D (TRIPO_API_KEY)' }, 500)
 
   // Ключ берём тот же, с которым пришло приложение (publishable), а старый anon — запасной вариант.
   const apiKey = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY')!
@@ -58,29 +59,34 @@ Deno.serve(async (req) => {
     return data
   }
 
-  const meshy = meshyClient(key)
 
   try {
     if (action === 'start') {
-      const photos: string[] = (art.photo_paths?.length ? art.photo_paths : [art.image_path]).slice(0, 4)
+      const photos: string[] = pickViews(art.photo_paths?.length ? art.photo_paths : [art.image_path])
       const { data: signed, error: signError } = await sb.storage.from(BUCKET).createSignedUrls(photos, 60 * 60)
       if (signError) throw new Error(signError.message)
-      // Ссылка на файл может не получиться (файл удалили): с такой Meshy молча вернёт брак.
+      // Ссылка на файл может не получиться (файл удалили): с такой сервис молча вернёт брак.
       const urls = signed.map((s) => s.signedUrl).filter((u): u is string => !!u)
       if (urls.length < photos.length) throw new Error('Не удалось прочитать фото поделки')
-      const taskId = await meshy.start(urls)
+      const taskId = `${provider.name}:${await provider.start(urls)}`
       const artwork = await update({ model_status: 'processing', model_task_id: taskId, model_error: null })
       return json({ artwork })
     }
 
     if (action === 'status') {
       if (art.model_status !== 'processing' || !art.model_task_id) return json({ artwork: art })
-      const task = await meshy.task(art.model_task_id)
+      const stored = String(art.model_task_id)
+      const cut = stored.indexOf(':')
+      const [name, id] = cut > 0 ? [stored.slice(0, cut), stored.slice(cut + 1)] : ['', '']
+      if (name !== provider.name || !id) {
+        // Задачу начал другой сервис (сменили ключ) — её уже не узнать, начнём заново.
+        return json({ artwork: await update({ model_status: 'failed', model_error: 'Сменился сервис 3D, попробуйте снова' }) })
+      }
+      const task = await provider.task(id)
 
-      if (task.status === 'SUCCEEDED') {
-        const glbUrl = task.model_urls?.glb
-        if (!glbUrl) throw new Error('Meshy не вернул .glb')
-        const glb = await fetch(glbUrl)
+      if (task.state === 'done') {
+        if (!task.glbUrl) throw new Error('Сервис не вернул ссылку на модель')
+        const glb = await fetch(task.glbUrl)
         if (!glb.ok) throw new Error(`Не удалось скачать модель (${glb.status})`)
         const path = `${artworkId}/model.glb`
         const { error: upError } = await sb.storage
@@ -89,11 +95,10 @@ Deno.serve(async (req) => {
         if (upError) throw new Error(upError.message)
         return json({ artwork: await update({ model_status: 'ready', model_path: path, model_error: null }) })
       }
-      if (isFinalFailure(task)) {
-        const reason = task.task_error?.message || task.status
-        return json({ artwork: await update({ model_status: 'failed', model_error: reason }) })
+      if (task.state === 'failed') {
+        return json({ artwork: await update({ model_status: 'failed', model_error: task.error ?? 'Не получилось' }) })
       }
-      return json({ artwork: art, progress: task.progress ?? 0 })
+      return json({ artwork: art, progress: task.progress })
     }
 
     return json({ error: 'Неизвестное действие' }, 400)

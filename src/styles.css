@@ -874,6 +874,35 @@ img { display: block; }
 .photos__item:only-child { width: 100%; }
 .photos__item img { width: 100%; height: 100%; object-fit: cover; }
 
+.spin {
+  position: relative;
+  margin-top: 8px;
+  aspect-ratio: 1;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--paper);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: ew-resize;
+}
+
+.spin img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+
+.spin--loading { display: grid; place-items: center; color: var(--muted); }
+
+.spin__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
 .model {
   display: block;
   width: 100%;

@@ -42,7 +42,9 @@ export function createCloudStore(sb: SupabaseClient): Store {
 
   return {
     mode: 'cloud',
-    can3D: true,
+    // 3D-модели строит платный Meshy. Пока тариф не оформлен, функция не опубликована,
+    // и вместо модели поделку крутят по фото (Spin). Включить: VITE_ENABLE_3D=true при сборке.
+    can3D: import.meta.env.VITE_ENABLE_3D === 'true',
 
     async load() {
       const [children, collections, artworks] = await Promise.all([
