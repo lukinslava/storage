@@ -1,20 +1,39 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArtworkForm } from '../components/ArtworkForm'
 import { CornerEditor } from '../components/CornerEditor'
 import { BackIcon, CameraIcon, CloseIcon, CubeIcon, ImageIcon, PhotoIcon, PlusIcon, RotateIcon } from '../components/Icons'
 import { useData } from '../lib/data'
-import { canvasToBlob, cutOut, encodeImage, prepareDrawing, preparePhoto, rotate90 } from '../lib/image/canvas'
+import {
+  canvasToBlob,
+  cutOut,
+  encodeImage,
+  prepareDrawing,
+  preparePhoto,
+  recut,
+  renderCutout,
+  rotate90,
+  type DrawingMode,
+  type PreparedDrawing,
+} from '../lib/image/canvas'
+import type { Cutout } from '../lib/image/cutout'
 import { defaultQuad, type Quad } from '../lib/image/geometry'
 import { store } from '../lib/store'
 import { today, type ArtworkMeta } from '../lib/types'
 
-type CropStep = { k: 'crop'; source: HTMLCanvasElement; quad: Quad; detected: boolean }
+type CropStep = {
+  k: 'crop'
+  prep: PreparedDrawing
+  mode: DrawingMode
+  quad: Quad
+  cut: Cutout | null
+  sensitivity: number
+}
 
 type Step =
   | { k: 'choose' }
   | CropStep
-  | { k: 'drawing'; canvas: HTMLCanvasElement; preview: string; crop: CropStep }
+  | { k: 'drawing'; canvas: HTMLCanvasElement; transparent: boolean; preview: string; crop: CropStep }
   | { k: 'craft' }
   | { k: 'craft-details' }
 
@@ -48,10 +67,10 @@ export function Scan() {
     e.target.value = ''
     if (!file) return
     setError(null)
-    setBusy('Ищу лист…')
+    setBusy('Ищу рисунок…')
     try {
-      const r = await prepareDrawing(file)
-      setStep({ k: 'crop', ...r })
+      const prep = await prepareDrawing(file)
+      setStep({ k: 'crop', prep, mode: prep.mode, quad: prep.quad, cut: prep.cut, sensitivity: 1 })
       setBusy(null)
     } catch (err) {
       fail(err)
@@ -82,10 +101,10 @@ export function Scan() {
     navigate(`/art/${id}`, { replace: true })
   }
 
-  const saveDrawing = async (canvas: HTMLCanvasElement, meta: ArtworkMeta) => {
+  const saveDrawing = async (canvas: HTMLCanvasElement, transparent: boolean, meta: ArtworkMeta) => {
     setBusy('Сохраняю…')
     try {
-      const enc = await encodeImage(canvas)
+      const enc = await encodeImage(canvas, transparent)
       const art = await store.createArtwork('drawing', meta, {
         image: enc.image,
         thumb: enc.thumb,
@@ -120,8 +139,19 @@ export function Scan() {
     }
   }
 
-  const showDrawing = (canvas: HTMLCanvasElement, crop: CropStep) =>
-    setStep({ k: 'drawing', canvas, crop, preview: canvas.toDataURL('image/jpeg', 0.7) })
+  const showDrawing = (canvas: HTMLCanvasElement, transparent: boolean, crop: CropStep) =>
+    setStep({
+      k: 'drawing',
+      canvas,
+      transparent,
+      crop,
+      preview: transparent ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.7),
+    })
+
+  const finishCrop = (c: CropStep) => {
+    if (c.mode === 'cutout' && c.cut) showDrawing(renderCutout(c.prep.source, c.cut), true, c)
+    else showDrawing(cutOut(c.prep.source, c.quad), false, c)
+  }
 
   const back = () => {
     setError(null)
@@ -154,7 +184,7 @@ export function Scan() {
             <div className="choose__card tint-sand">
               <PhotoIcon width={36} height={36} />
               <h2>Рисунок</h2>
-              <p>Сфотографируйте лист — приложение само найдёт края и выровняет его.</p>
+              <p>Сфотографируйте лист или вырезанную фигурку — приложение само найдёт края и уберёт фон.</p>
               <div className="choose__actions">
                 <button className="btn btn--primary" onClick={() => cameraInput.current?.click()} disabled={!!busy}>
                   <CameraIcon width={20} height={20} /> Снять
@@ -183,40 +213,86 @@ export function Scan() {
 
       {step.k === 'crop' && (
         <div className="stack">
-          <h2 className="step-title">Проверьте углы листа</h2>
-          <p className="muted">
-            {step.detected ? 'Лист найден. Если нужно — подвиньте углы.' : 'Не удалось найти лист — перетащите углы вручную.'}
-          </p>
-          <CornerEditor source={step.source} quad={step.quad} onChange={(quad) => setStep({ ...step, quad })} />
-          <div className="row">
+          <div className="segmented" role="radiogroup" aria-label="Как вырезать">
             <button
-              className="btn btn--ghost"
-              onClick={() =>
-                setStep({
-                  ...step,
-                  quad: defaultQuad(step.source.width, step.source.height, 0),
-                })
-              }
+              role="radio"
+              aria-checked={step.mode === 'sheet'}
+              className={'seg' + (step.mode === 'sheet' ? ' seg--on' : '')}
+              onClick={() => setStep({ ...step, mode: 'sheet' })}
             >
-              Весь кадр
+              Лист
             </button>
             <button
-              className="btn btn--primary"
-              onClick={() => showDrawing(cutOut(step.source, step.quad), step)}
+              role="radio"
+              aria-checked={step.mode === 'cutout'}
+              className={'seg' + (step.mode === 'cutout' ? ' seg--on' : '')}
+              onClick={() => setStep({ ...step, mode: 'cutout' })}
             >
-              Вырезать
+              По контуру
             </button>
           </div>
+
+          {step.mode === 'sheet' ? (
+            <>
+              <p className="muted">
+                {step.prep.detected
+                  ? 'Лист найден. Если нужно — подвиньте углы.'
+                  : 'Не удалось найти лист — перетащите углы вручную.'}
+              </p>
+              <CornerEditor source={step.prep.source} quad={step.quad} onChange={(quad) => setStep({ ...step, quad })} />
+              <div className="row">
+                <button
+                  className="btn btn--ghost"
+                  onClick={() =>
+                    setStep({ ...step, quad: defaultQuad(step.prep.source.width, step.prep.source.height, 0) })
+                  }
+                >
+                  Весь кадр
+                </button>
+                <button className="btn btn--primary" onClick={() => finishCrop(step)}>
+                  Вырезать
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="muted">
+                {step.cut
+                  ? 'Фон убран. Если пропали кусочки работы — сдвиньте ползунок влево, если остался стол — вправо.'
+                  : 'Не получилось отделить работу от фона. Сдвиньте ползунок или сфотографируйте на однотонном фоне.'}
+              </p>
+              <CutoutPreview small={step.prep.small} cut={step.cut} />
+              <label className="slider">
+                <span>Бережнее</span>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={1.6}
+                  step={0.05}
+                  value={step.sensitivity}
+                  onChange={(e) => {
+                    const sensitivity = Number(e.target.value)
+                    setStep({ ...step, sensitivity, cut: recut(step.prep.small, sensitivity) })
+                  }}
+                  aria-label="Сколько фона убирать"
+                />
+                <span>Смелее</span>
+              </label>
+              <button className="btn btn--primary btn--wide" disabled={!step.cut} onClick={() => finishCrop(step)}>
+                Готово
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {step.k === 'drawing' && (
         <div className="stack">
-          <div className="preview">
+          <div className={'preview' + (step.transparent ? ' preview--cutout' : '')}>
             <img src={step.preview} alt="Вырезанный рисунок" />
             <button
               className="icon-btn icon-btn--soft preview__rotate"
-              onClick={() => showDrawing(rotate90(step.canvas), step.crop)}
+              onClick={() => showDrawing(rotate90(step.canvas), step.transparent, step.crop)}
               aria-label="Повернуть"
             >
               <RotateIcon width={20} height={20} />
@@ -227,7 +303,7 @@ export function Scan() {
             initial={initialMeta}
             submitLabel="Повесить в музей"
             busy={!!busy}
-            onSubmit={(meta) => saveDrawing(step.canvas, meta)}
+            onSubmit={(meta) => saveDrawing(step.canvas, step.transparent, meta)}
           />
         </div>
       )}
@@ -302,6 +378,16 @@ export function Scan() {
         </div>
       )}
       {error && <p className="error">{error}</p>}
+    </div>
+  )
+}
+
+/** Предпросмотр вырезки по контуру (на уменьшенной копии — быстро пересчитывается). */
+function CutoutPreview({ small, cut }: { small: HTMLCanvasElement; cut: Cutout | null }) {
+  const url = useMemo(() => (cut ? renderCutout(small, cut).toDataURL('image/png') : null), [small, cut])
+  return (
+    <div className="preview preview--cutout preview--tall">
+      {url ? <img src={url} alt="Работа без фона" /> : <img src={small.toDataURL('image/jpeg', 0.7)} alt="Фото" />}
     </div>
   )
 }

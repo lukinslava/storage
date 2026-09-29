@@ -285,6 +285,16 @@ img { display: block; }
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16);
 }
 
+.frame--cutout .frame__inner {
+  background: transparent;
+  overflow: visible;
+}
+
+.frame--cutout .frame__inner img {
+  object-fit: contain;
+  filter: drop-shadow(0 12px 14px rgba(40, 30, 20, 0.22)) drop-shadow(0 2px 3px rgba(40, 30, 20, 0.2));
+}
+
 .badge-3d {
   position: absolute;
   right: 10px;
@@ -426,6 +436,8 @@ img { display: block; }
 }
 
 .folder__paper img { width: 100%; height: 100%; object-fit: cover; }
+.folder__paper--cutout { background: #fff; }
+.folder__paper--cutout img { object-fit: contain; padding: 6%; }
 .folder__paper--0 { left: 2%; transform: rotate(-5deg); z-index: 1; }
 .folder__paper--1 { left: 30%; top: -6%; transform: rotate(2deg); }
 .folder__paper--2 { left: 52%; top: 2%; transform: rotate(6deg); }
@@ -493,6 +505,9 @@ img { display: block; }
 }
 
 .card__img img { width: 100%; height: 100%; object-fit: cover; }
+
+.card__img--cutout { background: var(--paper); }
+.card__img--cutout img { object-fit: contain; padding: 10%; filter: drop-shadow(0 6px 8px rgba(40, 30, 20, 0.2)); }
 
 .card__kind {
   position: absolute;
@@ -719,6 +734,30 @@ img { display: block; }
   max-height: 46dvh;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
 }
+
+.preview--cutout {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(45deg, #e9e7e1 25%, transparent 25%),
+    linear-gradient(-45deg, #e9e7e1 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e9e7e1 75%),
+    linear-gradient(-45deg, transparent 75%, #e9e7e1 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+.preview--cutout img { box-shadow: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18)); }
+.preview--tall img { max-height: calc(100dvh - 420px); min-height: 200px; object-fit: contain; }
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.slider input { flex: 1; accent-color: var(--accent); }
 
 .preview__rotate { position: absolute; right: 12px; bottom: 12px; background: #fff; }
 

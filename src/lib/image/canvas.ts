@@ -1,3 +1,4 @@
+import { quadFit, segmentCutout, type Cutout } from './cutout'
 import { detectPaper, defaultQuad, quadOutputSize, scaleQuad, warpPerspective, type Pixels, type Quad } from './geometry'
 
 /** iOS Safari не любит холсты больше ~16 Мпикс — держим исходник в разумных пределах. */
@@ -29,9 +30,9 @@ export function toCanvas(source: CanvasImageSource & { width: number; height: nu
   return canvas
 }
 
-export function canvasToBlob(canvas: HTMLCanvasElement, quality = 0.88): Promise<Blob> {
+export function canvasToBlob(canvas: HTMLCanvasElement, quality = 0.88, type = 'image/jpeg'): Promise<Blob> {
   return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Не удалось сохранить картинку'))), 'image/jpeg', quality),
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Не удалось сохранить картинку'))), type, quality),
   )
 }
 
@@ -39,18 +40,77 @@ function pixelsOf(canvas: HTMLCanvasElement): Pixels {
   return canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height)
 }
 
-/** Готовит фото рисунка к кадрированию: уменьшенный исходник + найденные углы листа. */
-export async function prepareDrawing(file: Blob): Promise<{ source: HTMLCanvasElement; quad: Quad; detected: boolean }> {
+export type DrawingMode = 'sheet' | 'cutout'
+
+export interface PreparedDrawing {
+  source: HTMLCanvasElement
+  /** Углы листа (режим «Лист»). */
+  quad: Quad
+  detected: boolean
+  /** Уменьшенная копия для поиска контура (режим «По контуру»). */
+  small: HTMLCanvasElement
+  cut: Cutout | null
+  /** Какой режим подходит лучше: прямоугольный лист или фигура, вырезанная по контуру. */
+  mode: DrawingMode
+}
+
+const CUTOUT_SIDE = 800
+
+/** Готовит фото рисунка: находит углы листа и контур фигуры, выбирает подходящий режим. */
+export async function prepareDrawing(file: Blob): Promise<PreparedDrawing> {
   const img = await loadImage(file)
   const source = toCanvas(img, MAX_SOURCE_SIDE)
-  const small = toCanvas(source, 400)
-  const found = detectPaper(pixelsOf(small))
-  const k = source.width / small.width
+  const tiny = toCanvas(source, 400)
+  const found = detectPaper(pixelsOf(tiny))
+  const k = source.width / tiny.width
+  const small = toCanvas(source, CUTOUT_SIDE)
+  const cut = segmentCutout(pixelsOf(small))
+  // Если фигура плохо совпадает с четырёхугольником по её углам — это не лист, а вырезанная фигурка.
+  let mode: DrawingMode = 'sheet'
+  if (cut && (!found || quadFit(cut, scaleQuad(found, small.width / tiny.width)) < 0.9)) mode = 'cutout'
   return {
     source,
     quad: found ? scaleQuad(found, k) : defaultQuad(source.width, source.height),
     detected: !!found,
+    small,
+    cut,
+    mode,
   }
+}
+
+/** Пересчитывает контур с другой чувствительностью. */
+export function recut(small: HTMLCanvasElement, sensitivity: number): Cutout | null {
+  return segmentCutout(pixelsOf(small), sensitivity)
+}
+
+/** Вырезает фигуру по контуру: картинка с прозрачным фоном, обрезанная по фигуре. */
+export function renderCutout(source: HTMLCanvasElement, cut: Cutout): HTMLCanvasElement {
+  const maskCanvas = document.createElement('canvas')
+  maskCanvas.width = cut.width
+  maskCanvas.height = cut.height
+  const mctx = maskCanvas.getContext('2d')!
+  const m = mctx.createImageData(cut.width, cut.height)
+  for (let i = 0; i < cut.mask.length; i++) m.data[i * 4 + 3] = cut.mask[i] ? 255 : 0
+  mctx.putImageData(m, 0, 0)
+
+  const k = source.width / cut.width
+  const pad = Math.round(Math.max(cut.box.w, cut.box.h) * 0.02)
+  const bx = Math.max(0, cut.box.x - pad)
+  const by = Math.max(0, cut.box.y - pad)
+  const bw = Math.min(cut.width, cut.box.x + cut.box.w + pad) - bx
+  const bh = Math.min(cut.height, cut.box.y + cut.box.h + pad) - by
+  const scale = Math.min(k, MAX_OUTPUT_SIDE / Math.max(bw, bh))
+
+  const out = document.createElement('canvas')
+  out.width = Math.round(bw * scale)
+  out.height = Math.round(bh * scale)
+  const ctx = out.getContext('2d')!
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(source, bx * k, by * k, bw * k, bh * k, 0, 0, out.width, out.height)
+  // Маска растягивается со сглаживанием — край получается мягким, без «лесенки».
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.drawImage(maskCanvas, bx, by, bw, bh, 0, 0, out.width, out.height)
+  return out
 }
 
 /** Вырезает и выпрямляет лист. */
@@ -75,10 +135,14 @@ export function rotate90(canvas: HTMLCanvasElement, clockwise = true): HTMLCanva
   return out
 }
 
-/** Картинка + миниатюра, готовые к загрузке. */
-export async function encodeImage(canvas: HTMLCanvasElement): Promise<{ image: Blob; thumb: Blob; width: number; height: number }> {
-  const image = await canvasToBlob(canvas)
-  const thumb = await canvasToBlob(toCanvas(canvas, THUMB_SIDE), 0.82)
+/** Картинка + миниатюра, готовые к загрузке. `transparent` — PNG с прозрачным фоном (вырезка по контуру). */
+export async function encodeImage(
+  canvas: HTMLCanvasElement,
+  transparent = false,
+): Promise<{ image: Blob; thumb: Blob; width: number; height: number }> {
+  const type = transparent ? 'image/png' : 'image/jpeg'
+  const image = await canvasToBlob(canvas, 0.88, type)
+  const thumb = await canvasToBlob(toCanvas(canvas, THUMB_SIDE), 0.82, type)
   return { image, thumb, width: canvas.width, height: canvas.height }
 }
 

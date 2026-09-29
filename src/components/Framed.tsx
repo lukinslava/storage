@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useFileUrl } from '../lib/data'
-import type { Artwork } from '../lib/types'
+import { isCutout, type Artwork } from '../lib/types'
 
-type FrameStyle = 'wood' | 'tape' | 'pin' | 'mat'
+type FrameStyle = 'wood' | 'tape' | 'pin' | 'mat' | 'cutout'
 const STYLES: FrameStyle[] = ['wood', 'tape', 'pin', 'mat']
 
 function hash(s: string): number {
@@ -30,7 +30,10 @@ interface Props {
 
 export function Framed({ artwork, height, full = false, tilt = true }: Props) {
   const url = useFileUrl(full ? artwork.image_path : artwork.thumb_path)
-  const { style, tilt: deg } = frameFor(artwork.id)
+  const framed = frameFor(artwork.id)
+  // Фигурка, вырезанная по контуру, висит без рамки — только тень.
+  const style = isCutout(artwork) ? 'cutout' : framed.style
+  const deg = framed.tilt
   const aspect = artwork.aspect || 0.75
   const css: CSSProperties = { transform: tilt ? `rotate(${deg * 0.6}deg)` : undefined }
   return (

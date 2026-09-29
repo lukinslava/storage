@@ -104,8 +104,9 @@ export function createLocalStore(): Store {
 
     async createArtwork(kind, meta, files) {
       const id = uid()
-      const image_path = `${id}/image.jpg`
-      const thumb_path = `${id}/thumb.jpg`
+      const ext = files.image.type === 'image/png' ? 'png' : 'jpg'
+      const image_path = `${id}/image.${ext}`
+      const thumb_path = `${id}/thumb.${ext}`
       await putFile(image_path, files.image)
       await putFile(thumb_path, files.thumb)
       const photo_paths: string[] = []

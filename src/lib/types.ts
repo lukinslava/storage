@@ -39,6 +39,9 @@ export interface Artwork {
   notes: string
 }
 
+/** Работа вырезана по контуру (картинка с прозрачным фоном). */
+export const isCutout = (a: Pick<Artwork, 'image_path'>) => a.image_path.endsWith('.png')
+
 export type ArtworkMeta = Pick<Artwork, 'title' | 'child_id' | 'collection_id' | 'made_on' | 'notes'>
 
 export interface NewArtworkFiles {

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData, useFileUrl } from '../lib/data'
 import { formatDate } from '../lib/format'
-import type { Artwork } from '../lib/types'
+import { isCutout, type Artwork } from '../lib/types'
 
 function Card({ art }: { art: Artwork }) {
   const url = useFileUrl(art.thumb_path)
@@ -9,7 +9,7 @@ function Card({ art }: { art: Artwork }) {
   const child = children.find((c) => c.id === art.child_id)
   return (
     <Link to={`/art/${art.id}`} className="card">
-      <span className="card__img">
+      <span className={'card__img' + (isCutout(art) ? ' card__img--cutout' : '')}>
         {url && <img src={url} alt="" draggable={false} />}
         {art.kind === 'craft' && <span className="card__kind">{art.model_status === 'ready' ? '3D' : 'Поделка'}</span>}
       </span>

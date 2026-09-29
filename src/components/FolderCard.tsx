@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
 import { useFileUrl } from '../lib/data'
-import type { Artwork, Collection } from '../lib/types'
+import { isCutout, type Artwork, type Collection } from '../lib/types'
 
 function Paper({ art, i }: { art: Artwork; i: number }) {
   const url = useFileUrl(art.thumb_path)
   return (
-    <span className={`folder__paper folder__paper--${i}`}>{url && <img src={url} alt="" draggable={false} />}</span>
+    <span className={`folder__paper folder__paper--${i}` + (isCutout(art) ? ' folder__paper--cutout' : '')}>{url && <img src={url} alt="" draggable={false} />}</span>
   )
 }
 

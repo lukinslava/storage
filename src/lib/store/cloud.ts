@@ -75,8 +75,9 @@ export function createCloudStore(sb: SupabaseClient): Store {
 
     async createArtwork(kind, meta, files) {
       const id = crypto.randomUUID()
-      const image_path = `${id}/image.jpg`
-      const thumb_path = `${id}/thumb.jpg`
+      const ext = files.image.type === 'image/png' ? 'png' : 'jpg'
+      const image_path = `${id}/image.${ext}`
+      const thumb_path = `${id}/thumb.${ext}`
       const photo_paths = files.photos.map((_, i) => `${id}/photo-${i + 1}.jpg`)
       await Promise.all([
         upload(image_path, files.image),
