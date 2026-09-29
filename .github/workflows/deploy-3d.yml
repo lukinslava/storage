@@ -25,7 +25,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type check
-        run: deno check supabase/functions/generate-3d/index.ts
+        run: deno check --node-modules-dir=none supabase/functions/generate-3d/index.ts
       - name: Meshy smoke test (test key, no credits)
         run: deno run --allow-net supabase/functions/generate-3d/smoke.ts
 
