@@ -48,9 +48,8 @@ jobs:
           body=$(curl -s -H "$auth" https://openapi.tripo3d.ai/v3/tasks/00000000-0000-0000-0000-000000000000)
           echo "$body"
           if [ "$(echo "$body" | jq -r '.code')" = 1000 ]; then echo "::error::Tripo не принял ключ"; exit 1; fi
-          for url in https://openapi.tripo3d.ai/v3/user/balance https://api.tripo3d.ai/v2/openapi/user/balance; do
-            echo "$url → $(curl -s -H "$auth" "$url")"
-          done
+          # В API v3 баланса нет, он есть только в v2 (Tripo обещает закрыть v2 1 ноября 2026).
+          echo "Баланс: $(curl -s -H "$auth" https://api.tripo3d.ai/v2/openapi/user/balance)"
       # Полная проверка строит одну модель и тратит кредиты, поэтому только по ручному
       # запуску или по пушу с [smoke] в сообщении коммита.
       - name: Smoke test (тратит кредиты на одну модель)
