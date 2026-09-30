@@ -40,13 +40,17 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       # Бесплатная проверка ключа: запрос несуществующей задачи. Неверный ключ Tripo
-      # отвечает кодом 1000, верный — «задача не найдена».
-      - name: Check Tripo key (free)
+      # отвечает кодом 1000, верный — «задача не найдена». Заодно печатаем баланс кредитов.
+      - name: Check Tripo key and balance (free)
         if: ${{ env.TRIPO_API_KEY != '' }}
         run: |
-          body=$(curl -s -H "Authorization: Bearer $TRIPO_API_KEY" https://openapi.tripo3d.ai/v3/tasks/key-check)
+          auth="Authorization: Bearer $TRIPO_API_KEY"
+          body=$(curl -s -H "$auth" https://openapi.tripo3d.ai/v3/tasks/00000000-0000-0000-0000-000000000000)
           echo "$body"
           if [ "$(echo "$body" | jq -r '.code')" = 1000 ]; then echo "::error::Tripo не принял ключ"; exit 1; fi
+          for url in https://openapi.tripo3d.ai/v3/user/balance https://api.tripo3d.ai/v2/openapi/user/balance; do
+            echo "$url → $(curl -s -H "$auth" "$url")"
+          done
       # Полная проверка строит одну модель и тратит кредиты, поэтому только по ручному
       # запуску или по пушу с [smoke] в сообщении коммита.
       - name: Smoke test (тратит кредиты на одну модель)
