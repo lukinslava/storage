@@ -33,10 +33,28 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Вариант нейросети для видеокарты не используется (считаем на процессоре).
+        globIgnores: ['**/ort.webgpu*'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // Нейросеть для вырезания фона (~60 МБ) скачивается при первом вырезании и дальше
+        // берётся из кэша. Куски названы по хешу содержимого, поэтому не устаревают.
+        runtimeCaching: [
+          {
+            urlPattern: /\/bg-removal\/[0-9a-f]{64}$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'bg-removal', expiration: { maxEntries: 40 } },
+          },
+          {
+            urlPattern: /\/bg-removal\/resources\.json$/,
+            handler: 'NetworkFirst',
+            options: { cacheName: 'bg-removal-index' },
+          },
+        ],
       },
     }),
   ],
+  // Поток с нейросетью (src/lib/image/ai.worker.ts) подгружает части библиотеки по ходу дела.
+  worker: { format: 'es' },
   build: {
     // model-viewer (3D) весит ~1 МБ, но грузится только на странице поделки.
     chunkSizeWarningLimit: 1100,

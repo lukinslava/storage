@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/bg-model.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/bg-model.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -14,12 +16,15 @@
     "@fontsource-variable/unbounded": "^5.3.0",
     "@fontsource/literata": "^5.3.0",
     "@google/model-viewer": "^4.3.1",
+    "@imgly/background-removal": "1.7.0",
     "@supabase/supabase-js": "^2.117.2",
+    "onnxruntime-web": "1.21.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@imgly/background-removal-data": "1.4.5",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { quadFit, segmentCutout } from './cutout'
+import { alphaCutout, quadFit, segmentCutout } from './cutout'
 import type { Pixels } from './geometry'
 
 /** Деревянный стол: полосы светлых и тёмных волокон с шумом. */
@@ -80,5 +80,40 @@ describe('segmentCutout', () => {
 
   it('возвращает null на пустом столе', () => {
     expect(segmentCutout(woodTable(120, 120))).toBeNull()
+  })
+})
+
+describe('alphaCutout', () => {
+  // Маска нейросети: фигура (255) с мягким краем (128…200), отдельная соринка и дырка-блик внутри.
+  const w = 200
+  const h = 200
+  const alpha = new Uint8Array(w * h)
+  const disc = (cx: number, cy: number, r: number, v: number) => {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) alpha[y * w + x] = v
+  }
+  disc(100, 100, 70, 160)
+  disc(100, 100, 60, 255)
+  disc(100, 100, 4, 0)
+  disc(185, 15, 6, 255)
+  const at = (c: ReturnType<typeof alphaCutout>, x: number, y: number) => c!.mask[y * w + x]
+
+  it('берёт самую большую фигуру и заделывает мелкие дырки', () => {
+    const c = alphaCutout(alpha, w, h)
+    expect(c).not.toBeNull()
+    expect(at(c, 100, 100)).toBe(1)
+    expect(at(c, 100, 35)).toBe(1)
+    expect(at(c, 185, 15)).toBe(0)
+    expect(at(c, 5, 5)).toBe(0)
+    expect(c!.box).toEqual({ x: 30, y: 30, w: 141, h: 141 })
+  })
+
+  it('ползунок «Смелее» срезает мягкий край', () => {
+    const c = alphaCutout(alpha, w, h, 1.6)
+    expect(at(c, 100, 35)).toBe(0)
+    expect(at(c, 100, 45)).toBe(1)
+  })
+
+  it('возвращает null, если нейросеть ничего не нашла', () => {
+    expect(alphaCutout(new Uint8Array(w * h), w, h)).toBeNull()
   })
 })

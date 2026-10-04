@@ -16,7 +16,8 @@ import {
   type DrawingMode,
   type PreparedDrawing,
 } from '../lib/image/canvas'
-import type { Cutout } from '../lib/image/cutout'
+import { aiMask } from '../lib/image/ai'
+import { alphaCutout, type Cutout } from '../lib/image/cutout'
 import { defaultQuad, type Quad } from '../lib/image/geometry'
 import { store } from '../lib/store'
 import { today, type ArtworkMeta } from '../lib/types'
@@ -28,7 +29,12 @@ type CropStep = {
   quad: Quad
   cut: Cutout | null
   sensitivity: number
+  /** Маска нейросети для режима «По контуру»; null — ещё не готова или не вышло. */
+  ai: Uint8Array | null
 }
+
+/** Нейросеть: работает (share — доля скачанной модели) или не справилась. */
+type AiState = { share: number | null } | 'failed' | null
 
 type Step =
   | { k: 'choose' }
@@ -51,6 +57,8 @@ export function Scan() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [make3D, setMake3D] = useState(store.can3D)
+  const [ai, setAi] = useState<AiState>(null)
+  const aiFor = useRef<PreparedDrawing | null>(null)
   const { reload } = useData()
   const navigate = useNavigate()
   const cameraInput = useRef<HTMLInputElement>(null)
@@ -70,11 +78,38 @@ export function Scan() {
     setBusy('Ищу рисунок…')
     try {
       const prep = await prepareDrawing(file)
-      setStep({ k: 'crop', prep, mode: prep.mode, quad: prep.quad, cut: prep.cut, sensitivity: 1 })
+      aiFor.current = null
+      setAi(null)
+      setStep({ k: 'crop', prep, mode: prep.mode, quad: prep.quad, cut: prep.cut, sensitivity: 1, ai: null })
       setBusy(null)
+      if (prep.mode === 'cutout') runAI(prep)
     } catch (err) {
       fail(err)
     }
+  }
+
+  /**
+   * Ищет фигуру нейросетью; пока она думает, «Готово» недоступно. Если нейросеть не запустилась
+   * или не нашла фигуру (на целом листе она выделяет отдельные штрихи), остаётся вырезка по цвету.
+   */
+  const runAI = (prep: PreparedDrawing) => {
+    if (aiFor.current === prep) return
+    aiFor.current = prep
+    setAi({ share: null })
+    aiMask(prep.small, (share) => aiFor.current === prep && setAi({ share })).then(
+      (alpha) => {
+        if (aiFor.current !== prep) return
+        const { width, height } = prep.small
+        if (!alphaCutout(alpha, width, height)) return setAi('failed')
+        setAi(null)
+        setStep((s) =>
+          s.k === 'crop' && s.prep === prep
+            ? { ...s, ai: alpha, cut: alphaCutout(alpha, width, height, s.sensitivity) }
+            : s,
+        )
+      },
+      () => aiFor.current === prep && setAi('failed'),
+    )
   }
 
   const onCraftFiles = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -160,6 +195,9 @@ export function Scan() {
     else if (step.k === 'drawing') setStep(step.crop)
   }
 
+  /** Нейросеть ещё думает над текущим фото. */
+  const thinking = step.k === 'crop' && !!ai && ai !== 'failed'
+
   const initialMeta: ArtworkMeta = { title: '', child_id: null, collection_id: null, made_on: today(), notes: '' }
 
   return (
@@ -226,7 +264,10 @@ export function Scan() {
               role="radio"
               aria-checked={step.mode === 'cutout'}
               className={'seg' + (step.mode === 'cutout' ? ' seg--on' : '')}
-              onClick={() => setStep({ ...step, mode: 'cutout' })}
+              onClick={() => {
+                setStep({ ...step, mode: 'cutout' })
+                runAI(step.prep)
+              }}
             >
               По контуру
             </button>
@@ -256,12 +297,8 @@ export function Scan() {
             </>
           ) : (
             <>
-              <p className="muted">
-                {step.cut
-                  ? 'Фон убран. Если пропали кусочки работы — сдвиньте ползунок влево, если остался стол — вправо.'
-                  : 'Не получилось отделить работу от фона. Сдвиньте ползунок или сфотографируйте на однотонном фоне.'}
-              </p>
-              <CutoutPreview small={step.prep.small} cut={step.cut} />
+              <p className="muted">{cutoutHint(step.cut, ai)}</p>
+              <CutoutPreview small={step.prep.small} cut={thinking ? null : step.cut} />
               <label className="slider">
                 <span>Бережнее</span>
                 <input
@@ -270,15 +307,20 @@ export function Scan() {
                   max={1.6}
                   step={0.05}
                   value={step.sensitivity}
+                  disabled={thinking}
                   onChange={(e) => {
                     const sensitivity = Number(e.target.value)
-                    setStep({ ...step, sensitivity, cut: recut(step.prep.small, sensitivity) })
+                    const { small } = step.prep
+                    const cut = step.ai
+                      ? alphaCutout(step.ai, small.width, small.height, sensitivity)
+                      : recut(small, sensitivity)
+                    setStep({ ...step, sensitivity, cut })
                   }}
                   aria-label="Сколько фона убирать"
                 />
                 <span>Смелее</span>
               </label>
-              <button className="btn btn--primary btn--wide" disabled={!step.cut} onClick={() => finishCrop(step)}>
+              <button className="btn btn--primary btn--wide" disabled={!step.cut || thinking} onClick={() => finishCrop(step)}>
                 Готово
               </button>
             </>
@@ -379,6 +421,19 @@ export function Scan() {
       )}
       {error && <p className="error">{error}</p>}
     </div>
+  )
+}
+
+function cutoutHint(cut: Cutout | null, ai: AiState): string {
+  if (ai && ai !== 'failed') {
+    return ai.share !== null && ai.share < 1
+      ? `Скачиваю нейросеть (только в первый раз): ${Math.round(ai.share * 100)}%`
+      : 'Нейросеть ищет фигуру…'
+  }
+  if (!cut) return 'Не получилось отделить работу от фона. Сдвиньте ползунок или сфотографируйте на однотонном фоне.'
+  return (
+    (ai === 'failed' ? 'Нейросеть не справилась, фон убран по цвету.' : 'Фон убран.') +
+    ' Если пропали кусочки работы — сдвиньте ползунок влево, если остался стол — вправо.'
   )
 }
 

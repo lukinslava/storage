@@ -230,12 +230,27 @@ export function segmentCutout(img: Pixels, sensitivity = 1): Cutout | null {
 
   // Просветы стола внутри фигуры не вырезаем: у детских работ их почти не бывает,
   // а похожие по цвету места (кожа, картон) пропадали бы.
-  let fg = new Uint8Array(n)
+  const fg = new Uint8Array(n)
   for (let i = 0; i < n; i++) fg[i] = bg[i] ? 0 : 1
 
   // Убираем «ворс» по краю и тонкие перемычки к предметам вокруг.
-  fg = dilate(erode(fg, w, h), w, h)
+  return mainShape(dilate(erode(fg, w, h), w, h), w, h)
+}
 
+/**
+ * Контур по маске нейросети (0…255 на пиксель, см. ai.ts).
+ * `sensitivity` > 1 — смелее отрезает фон, < 1 — осторожнее.
+ */
+export function alphaCutout(alpha: Uint8Array, w: number, h: number, sensitivity = 1): Cutout | null {
+  const t = Math.min(250, Math.max(5, 128 * sensitivity))
+  const fg = new Uint8Array(w * h)
+  for (let i = 0; i < fg.length; i++) fg[i] = alpha[i] >= t ? 1 : 0
+  return mainShape(fg, w, h)
+}
+
+/** Самая большая фигура маски с заделанными мелкими дырками; null — если она слишком мала. */
+function mainShape(fg: Uint8Array, w: number, h: number): Cutout | null {
+  const n = w * h
   const comp = components(fg, w, h)
   let best = -1
   let bestSize = 0
