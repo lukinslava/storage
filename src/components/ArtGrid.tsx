@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useData, useFileUrl } from '../lib/data'
 import { formatDate } from '../lib/format'
 import { isCutout, type Artwork } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 function Card({ art }: { art: Artwork }) {
   const url = useFileUrl(art.thumb_path)
@@ -11,12 +12,12 @@ function Card({ art }: { art: Artwork }) {
     <Link to={`/art/${art.id}`} className="card">
       <span className={'card__img' + (isCutout(art) ? ' card__img--cutout' : '')}>
         {url && <img src={url} alt="" draggable={false} />}
-        {art.kind === 'craft' && <span className="card__kind">{art.model_status === 'ready' ? '3D' : 'Поделка'}</span>}
+        {art.kind === 'craft' && <span className="card__kind">{art.model_status === 'ready' ? '3D' : tr('Поделка')}</span>}
       </span>
-      <span className="card__title">{art.title || (art.kind === 'drawing' ? 'Без названия' : 'Поделка')}</span>
+      <span className="card__title">{art.title || tr(art.kind === 'drawing' ? 'Без названия' : 'Поделка')}</span>
       <span className="card__meta">
         {child && <span className={`dot tint-${child.color}`} />}
-        {child ? child.name : 'Вместе'} · {formatDate(art.made_on)}
+        {child ? child.name : tr('Вместе')} · {formatDate(art.made_on)}
       </span>
     </Link>
   )

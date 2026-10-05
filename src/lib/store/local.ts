@@ -1,5 +1,6 @@
 import type { Artwork, Child, Collection } from '../types'
 import type { Snapshot, Store } from './types'
+import { tr } from '../i18n'
 
 // Локальный режим: всё лежит в IndexedDB этого браузера.
 // Удобно, чтобы попробовать приложение без облака.
@@ -33,8 +34,8 @@ function tx<T>(db: IDBDatabase, store: string, mode: IDBTransactionMode, fn: (s:
 const uid = () => crypto.randomUUID()
 
 const SEED_CHILDREN: Child[] = [
-  { id: 'kirill', name: 'Кирилл', color: 'blue', sort: 0 },
-  { id: 'mark', name: 'Марк', color: 'green', sort: 1 },
+  { id: 'kirill', name: tr('Кирилл'), color: 'blue', sort: 0 },
+  { id: 'mark', name: tr('Марк'), color: 'green', sort: 1 },
 ]
 
 export function createLocalStore(): Store {
@@ -159,11 +160,11 @@ export function createLocalStore(): Store {
     },
 
     async start3D() {
-      throw new Error('3D-модели доступны только при подключённом облаке (Supabase).')
+      throw new Error(tr('3D-модели доступны только при подключённом облаке (Supabase).'))
     },
 
     async check3D() {
-      throw new Error('3D-модели доступны только при подключённом облаке (Supabase).')
+      throw new Error(tr('3D-модели доступны только при подключённом облаке (Supabase).'))
     },
   }
 }

@@ -3,6 +3,7 @@ import { useData } from '../lib/data'
 import { worksCount } from '../lib/format'
 import { store, supabase } from '../lib/store'
 import { TINTS, TINT_LABELS, type Child } from '../lib/types'
+import { lang, setLang, tr } from '../lib/i18n'
 
 function ChildRow({ child }: { child: Child }) {
   const { artworks, reload } = useData()
@@ -19,7 +20,7 @@ function ChildRow({ child }: { child: Child }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={() => name.trim() && name.trim() !== child.name && save({ name: name.trim() })}
-          aria-label="Имя"
+          aria-label={tr('Имя')}
         />
         <span className="muted small">{worksCount(artworks.filter((a) => a.child_id === child.id).length)}</span>
       </div>
@@ -29,7 +30,7 @@ function ChildRow({ child }: { child: Child }) {
             key={t}
             className={`swatch tint-${t}` + (t === child.color ? ' swatch--on' : '')}
             onClick={() => save({ color: t })}
-            aria-label={TINT_LABELS[t]}
+            aria-label={tr(TINT_LABELS[t])}
             aria-pressed={t === child.color}
           />
         ))}
@@ -47,47 +48,70 @@ export function Settings() {
   return (
     <div className="page">
       <header className="page__head">
-        <h1>Настройки</h1>
+        <h1>{tr('Настройки')}</h1>
       </header>
 
       <section className="settings-group">
-        <h2>Художники</h2>
+        <h2>{tr('Художники')}</h2>
         {children.map((c) => (
           <ChildRow key={c.id} child={c} />
         ))}
       </section>
 
       <section className="settings-group">
-        <h2>Музей</h2>
+        <h2>{tr('Музей')}</h2>
         <div className="stats">
           <div>
             <b>{drawings}</b>
-            <span>рисунков</span>
+            <span>{tr('рисунков')}</span>
           </div>
           <div>
             <b>{crafts}</b>
-            <span>поделок</span>
+            <span>{tr('поделок')}</span>
           </div>
           <div>
             <b>{models}</b>
-            <span>3D-моделей</span>
+            <span>{tr('3D-моделей')}</span>
           </div>
         </div>
       </section>
 
       <section className="settings-group">
-        <h2>Хранилище</h2>
+        <h2>{tr('Язык')}</h2>
+        <div className="segmented" role="radiogroup" aria-label={tr('Язык')}>
+          {(
+            [
+              ['ru', 'Русский'],
+              ['en', 'English'],
+            ] as const
+          ).map(([code, label]) => (
+            <button
+              key={code}
+              role="radio"
+              aria-checked={lang === code}
+              className={'seg' + (lang === code ? ' seg--on' : '')}
+              onClick={() => lang !== code && setLang(code)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="settings-group">
+        <h2>{tr('Хранилище')}</h2>
         {store.mode === 'cloud' ? (
           <>
-            <p>Работы хранятся в облаке (Supabase) и доступны с любого устройства после входа.</p>
+            <p>{tr('Работы хранятся в облаке (Supabase) и доступны с любого устройства после входа.')}</p>
             <button className="btn btn--ghost" onClick={() => supabase?.auth.signOut()}>
-              Выйти
+              {tr('Выйти')}
             </button>
           </>
         ) : (
           <p>
-            Сейчас работы хранятся <b>только в этом браузере</b>. Чтобы они были в облаке и появились 3D-модели,
-            подключите Supabase — инструкция в README проекта.
+            {tr(
+              'Сейчас работы хранятся только в этом браузере. Чтобы они были в облаке и появились 3D-модели, подключите Supabase — инструкция в README проекта.',
+            )}
           </p>
         )}
       </section>

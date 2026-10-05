@@ -1,3 +1,7 @@
+import { lang } from './i18n'
+
+const LOCALE = lang === 'en' ? 'en-US' : 'ru-RU'
+
 export function plural(n: number, one: string, few: string, many: string): string {
   const m10 = n % 10
   const m100 = n % 100
@@ -16,17 +20,18 @@ const parse = (value: string) => {
 /** «12 сентября 2026» */
 export function formatDate(ymd: string): string {
   return parse(ymd)
-    .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+    .toLocaleDateString(LOCALE, { day: 'numeric', month: 'long', year: 'numeric' })
     .replace(/\s*г\.?$/, '')
 }
 
 /** «Сентябрь 2026» */
 export function formatMonth(ymd: string): string {
-  const s = parse(ymd).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(/\s*г\.?$/, '')
+  const s = parse(ymd).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' }).replace(/\s*г\.?$/, '')
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** «5 работ» */
+/** «5 работ» / «5 works» */
 export function worksCount(n: number): string {
+  if (lang === 'en') return `${n} ${n === 1 ? 'work' : 'works'}`
   return `${n} ${plural(n, 'работа', 'работы', 'работ')}`
 }

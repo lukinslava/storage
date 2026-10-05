@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/store'
+import { tr } from '../lib/i18n'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -12,7 +13,7 @@ export function Login() {
     setBusy(true)
     setError(null)
     const { error } = await supabase!.auth.signInWithPassword({ email: email.trim(), password })
-    if (error) setError(error.message === 'Invalid login credentials' ? 'Неверная почта или пароль' : error.message)
+    if (error) setError(error.message === 'Invalid login credentials' ? tr('Неверная почта или пароль') : error.message)
     setBusy(false)
   }
 
@@ -23,17 +24,17 @@ export function Login() {
         <span className="empty-frame empty-frame--b" />
       </div>
       <p className="hero__title">
-        Маленький
+        {tr('Маленький')}
         <br />
-        музей.
+        {tr('музей.')}
       </p>
       <form className="form" onSubmit={submit}>
         <label className="field">
-          <span>Почта</span>
+          <span>{tr('Почта')}</span>
           <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label className="field">
-          <span>Пароль</span>
+          <span>{tr('Пароль')}</span>
           <input
             type="password"
             autoComplete="current-password"
@@ -44,7 +45,7 @@ export function Login() {
         </label>
         {error && <p className="error">{error}</p>}
         <button className="btn btn--primary btn--wide" disabled={busy}>
-          {busy ? 'Вхожу…' : 'Войти'}
+          {busy ? tr('Вхожу…') : tr('Войти')}
         </button>
       </form>
     </div>

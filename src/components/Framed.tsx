@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useFileUrl } from '../lib/data'
 import { isCutout, type Artwork } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 type FrameStyle = 'wood' | 'tape' | 'pin' | 'mat' | 'cutout'
 const STYLES: FrameStyle[] = ['wood', 'tape', 'pin', 'mat']
@@ -42,7 +43,7 @@ export function Framed({ artwork, height, full = false, tilt = true }: Props) {
       {style === 'tape' && <span className="frame__tape" />}
       {style === 'pin' && <span className="frame__pin" />}
       <div className="frame__inner" style={{ height, width: height * aspect }}>
-        {url ? <img src={url} alt={artwork.title || 'Работа'} draggable={false} /> : <div className="frame__loading" />}
+        {url ? <img src={url} alt={artwork.title || tr('Работа')} draggable={false} /> : <div className="frame__loading" />}
       </div>
       {artwork.kind === 'craft' && artwork.model_status === 'ready' && <span className="badge-3d">3D</span>}
     </div>

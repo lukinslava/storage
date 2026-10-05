@@ -9,6 +9,7 @@ import { useData, useFileUrl } from '../lib/data'
 import { formatDate } from '../lib/format'
 import { store } from '../lib/store'
 import type { Artwork } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 const POLL_MS = 10_000
 
@@ -44,22 +45,22 @@ function Model3D({ art }: { art: Artwork }) {
   }
 
   if (!store.can3D) {
-    return <p className="note">3D-модели появятся, когда будет подключено облако (см. Настройки).</p>
+    return <p className="note">{tr('3D-модели появятся, когда будет подключено облако (см. Настройки).')}</p>
   }
   if (art.model_status === 'processing') {
     return (
       <div className="note note--busy">
-        <span className="spinner" /> 3D-модель создаётся. Обычно это занимает 2–5 минут.
+        <span className="spinner" /> {tr('3D-модель создаётся. Обычно это занимает 2–5 минут.')}
       </div>
     )
   }
   if (art.model_status === 'ready') return null
   return (
     <div className="note">
-      {art.model_status === 'failed' && <p className="error">Не получилось: {art.model_error ?? 'неизвестная ошибка'}</p>}
+      {art.model_status === 'failed' && <p className="error">{tr('Не получилось: {error}', { error: art.model_error ?? tr('неизвестная ошибка') })}</p>}
       {error && <p className="error">{error}</p>}
       <button className="btn btn--ghost" onClick={start} disabled={starting}>
-        <CubeIcon width={20} height={20} /> {art.model_status === 'failed' ? 'Попробовать снова' : 'Создать 3D-модель'}
+        <CubeIcon width={20} height={20} /> {tr(art.model_status === 'failed' ? 'Попробовать снова' : 'Создать 3D-модель')}
       </button>
     </div>
   )
@@ -80,15 +81,15 @@ export function ArtworkPage() {
   if (!art) {
     return (
       <div className="page">
-        <p className="muted">Работа не найдена.</p>
-        <Link to="/">В музей</Link>
+        <p className="muted">{tr('Работа не найдена.')}</p>
+        <Link to="/">{tr('В музей')}</Link>
       </div>
     )
   }
 
   const child = children.find((c) => c.id === art.child_id)
   const collection = collections.find((c) => c.id === art.collection_id)
-  const title = art.title || (art.kind === 'drawing' ? 'Без названия' : 'Поделка')
+  const title = art.title || tr(art.kind === 'drawing' ? 'Без названия' : 'Поделка')
   const has3D = art.kind === 'craft' && art.model_status === 'ready' && art.model_path
 
   const remove = async () => {
@@ -101,14 +102,14 @@ export function ArtworkPage() {
   return (
     <div className="page page--art">
       <header className="page__head page__head--nav">
-        <button className="icon-btn icon-btn--soft" onClick={() => navigate(-1)} aria-label="Назад">
+        <button className="icon-btn icon-btn--soft" onClick={() => navigate(-1)} aria-label={tr('Назад')}>
           <BackIcon width={20} height={20} />
         </button>
         <div className="page__actions">
-          <button className="icon-btn icon-btn--soft" onClick={() => setEditing(true)} aria-label="Изменить">
+          <button className="icon-btn icon-btn--soft" onClick={() => setEditing(true)} aria-label={tr('Изменить')}>
             <EditIcon width={20} height={20} />
           </button>
-          <button className="icon-btn icon-btn--soft" onClick={() => setConfirming(true)} disabled={busy} aria-label="Удалить">
+          <button className="icon-btn icon-btn--soft" onClick={() => setConfirming(true)} disabled={busy} aria-label={tr('Удалить')}>
             <TrashIcon width={20} height={20} />
           </button>
         </div>
@@ -126,7 +127,7 @@ export function ArtworkPage() {
                 3D
               </button>
               <button className={'seg' + (view === 'photos' ? ' seg--on' : '')} onClick={() => setView('photos')}>
-                Фото
+                {tr('Фото')}
               </button>
             </div>
           )}
@@ -135,7 +136,7 @@ export function ArtworkPage() {
           ) : (
             <div className="photos">
               {(art.photo_paths.length ? art.photo_paths : [art.image_path]).map((p, i) => (
-                <Photo key={p} path={p} alt={`${title}, фото ${i + 1}`} />
+                <Photo key={p} path={p} alt={tr('{title}, фото {n}', { title, n: i + 1 })} />
               ))}
             </div>
           )}
@@ -145,7 +146,7 @@ export function ArtworkPage() {
       <div className="art-info">
         <h1 className="title-serif">{title}</h1>
         <div className="meta-row">
-          <span className={`chip chip--static tint-${child?.color ?? 'sand'}`}>{child ? child.name : 'Вместе'}</span>
+          <span className={`chip chip--static tint-${child?.color ?? 'sand'}`}>{child ? child.name : tr('Вместе')}</span>
           <span className="muted">{formatDate(art.made_on)}</span>
         </div>
         {collection && (
@@ -154,22 +155,22 @@ export function ArtworkPage() {
           </Link>
         )}
         {art.notes && <p className="notes">{art.notes}</p>}
-        <p className="muted small">Добавлено {formatDate(art.created_at)}</p>
+        <p className="muted small">{tr('Добавлено {date}', { date: formatDate(art.created_at) })}</p>
         {art.kind === 'craft' && <Model3D art={art} />}
       </div>
 
       {confirming && (
         <ConfirmSheet
-          title="Удалить работу?"
-          text={`«${title}» пропадёт из музея вместе с фото. Это нельзя отменить.`}
-          action="Удалить"
+          title={tr('Удалить работу?')}
+          text={tr('«{title}» пропадёт из музея вместе с фото. Это нельзя отменить.', { title })}
+          action={tr('Удалить')}
           onConfirm={remove}
           onClose={() => setConfirming(false)}
         />
       )}
 
       {editing && (
-        <Sheet title="Изменить" onClose={() => setEditing(false)}>
+        <Sheet title={tr('Изменить')} onClose={() => setEditing(false)}>
           <ArtworkForm
             kind={art.kind}
             initial={{
@@ -179,7 +180,7 @@ export function ArtworkPage() {
               made_on: art.made_on,
               notes: art.notes,
             }}
-            submitLabel="Сохранить"
+            submitLabel={tr('Сохранить')}
             onSubmit={async (meta) => {
               await store.updateArtwork(art.id, meta)
               await reload()

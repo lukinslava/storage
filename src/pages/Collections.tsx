@@ -6,6 +6,7 @@ import { Sheet } from '../components/Sheet'
 import { useData } from '../lib/data'
 import { store } from '../lib/store'
 import { TINTS, TINT_LABELS, type Tint } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 export function Collections() {
   const { collections, artworks, loading } = useData()
@@ -14,7 +15,7 @@ export function Collections() {
   return (
     <div className="page">
       <header className="page__head">
-        <h1>Коллекции</h1>
+        <h1>{tr('Коллекции')}</h1>
       </header>
 
       {!loading && (
@@ -37,12 +38,12 @@ export function Collections() {
 
       <div className="hero">
         <p className="hero__title">
-          Маленькие миры.
+          {tr('Маленькие миры.')}
           <br />
-          Все вместе.
+          {tr('Все вместе.')}
         </p>
         <button className="btn btn--primary" onClick={() => setCreating(true)}>
-          <PlusIcon width={20} height={20} /> Новая коллекция
+          <PlusIcon width={20} height={20} /> {tr('Новая коллекция')}
         </button>
       </div>
 
@@ -85,14 +86,14 @@ export function CollectionSheet({
   }
 
   return (
-    <Sheet title={initial ? 'Коллекция' : 'Новая коллекция'} onClose={onClose}>
+    <Sheet title={tr(initial ? 'Коллекция' : 'Новая коллекция')} onClose={onClose}>
       <div className="form">
         <label className="field">
-          <span>Название</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Котики" autoFocus maxLength={60} />
+          <span>{tr('Название')}</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tr('Котики')} autoFocus maxLength={60} />
         </label>
         <div className="field">
-          <span>Цвет</span>
+          <span>{tr('Цвет')}</span>
           <div className="swatches">
             {TINTS.map((t) => (
               <button
@@ -100,7 +101,7 @@ export function CollectionSheet({
                 type="button"
                 className={`swatch tint-${t}` + (t === color ? ' swatch--on' : '')}
                 onClick={() => setColor(t)}
-                aria-label={TINT_LABELS[t]}
+                aria-label={tr(TINT_LABELS[t])}
                 aria-pressed={t === color}
               />
             ))}
@@ -108,7 +109,7 @@ export function CollectionSheet({
         </div>
         {error && <p className="error">{error}</p>}
         <button className="btn btn--primary btn--wide" onClick={save} disabled={busy || !name.trim()}>
-          {initial ? 'Сохранить' : 'Создать'}
+          {tr(initial ? 'Сохранить' : 'Создать')}
         </button>
       </div>
     </Sheet>

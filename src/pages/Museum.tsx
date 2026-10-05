@@ -5,6 +5,7 @@ import { FilterIcon, PlusIcon } from '../components/Icons'
 import { useData } from '../lib/data'
 import { worksCount } from '../lib/format'
 import type { ArtworkKind } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 export function Museum() {
   const { artworks, children, loading } = useData()
@@ -21,11 +22,11 @@ export function Museum() {
   return (
     <div className="page page--museum">
       <header className="page__head">
-        <h1>Музей</h1>
+        <h1>{tr('Музей')}</h1>
         <button
           className={'icon-btn icon-btn--soft' + (filtered ? ' icon-btn--dot' : '')}
           onClick={() => setShowFilter((v) => !v)}
-          aria-label="Фильтр"
+          aria-label={tr('Фильтр')}
           aria-expanded={showFilter}
         >
           <FilterIcon width={20} height={20} />
@@ -36,7 +37,7 @@ export function Museum() {
         <div className="filters">
           <div className="chips">
             <button className={'chip' + (child === 'all' ? ' chip--on' : '')} onClick={() => setChild('all')}>
-              Все
+              {tr('Все')}
             </button>
             {children.map((c) => (
               <button
@@ -57,14 +58,14 @@ export function Museum() {
               ] as const
             ).map(([k, label]) => (
               <button key={k} className={'chip' + (kind === k ? ' chip--on' : '')} onClick={() => setKind(k)}>
-                {label}
+                {tr(label)}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <section className="gallery" aria-label="Работы">
+      <section className="gallery" aria-label={tr('Работы')}>
         {loading ? null : list.length === 0 ? (
           <div className="gallery__empty">
             <div className="empty-frame empty-frame--a" />
@@ -84,13 +85,13 @@ export function Museum() {
 
       <div className="hero">
         <p className="hero__title">
-          Юный художник.
+          {tr('Юный художник.')}
           <br />
-          Большой вернисаж.
+          {tr('Большой вернисаж.')}
         </p>
-        {list.length > 0 && <p className="hero__count muted">{worksCount(list.length)} в музее</p>}
+        {list.length > 0 && <p className="hero__count muted">{tr('{works} в музее', { works: worksCount(list.length) })}</p>}
         <Link to="/scan" className="btn btn--primary">
-          <PlusIcon width={20} height={20} /> Повесить работу
+          <PlusIcon width={20} height={20} /> {tr('Повесить работу')}
         </Link>
       </div>
     </div>

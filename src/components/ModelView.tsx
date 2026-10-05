@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useFileUrl } from '../lib/data'
+import { tr } from '../lib/i18n'
 
 declare module 'react' {
   namespace JSX {
@@ -26,7 +27,7 @@ export function ModelView({ path, poster, alt }: { path: string; poster?: string
   useEffect(() => {
     import('@google/model-viewer').then(() => setReady(true))
   }, [])
-  if (!url || !ready) return <div className="model model--loading">Загружаю 3D…</div>
+  if (!url || !ready) return <div className="model model--loading">{tr('Загружаю 3D…')}</div>
   return (
     <model-viewer
       className="model"

@@ -4,6 +4,7 @@ import { ArtGrid } from '../components/ArtGrid'
 import { useData } from '../lib/data'
 import { formatMonth, worksCount } from '../lib/format'
 import type { Artwork } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 /** Лента по месяцам: как рос маленький художник. */
 export function Story() {
@@ -23,11 +24,11 @@ export function Story() {
   return (
     <div className="page">
       <header className="page__head">
-        <h1>История</h1>
+        <h1>{tr('История')}</h1>
       </header>
       <div className="chips">
         <button className={'chip' + (child === 'all' ? ' chip--on' : '')} onClick={() => setChild('all')}>
-          Все
+          {tr('Все')}
         </button>
         {children.map((c) => (
           <button
@@ -43,12 +44,12 @@ export function Story() {
       {!loading && months.length === 0 && (
         <div className="hero">
           <p className="hero__title">
-            Каждая работа —
+            {tr('Каждая работа —')}
             <br />
-            страничка истории.
+            {tr('страничка истории.')}
           </p>
           <Link to="/scan" className="btn btn--primary">
-            Добавить первую
+            {tr('Добавить первую')}
           </Link>
         </div>
       )}

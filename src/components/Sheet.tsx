@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { CloseIcon } from './Icons'
+import { tr } from '../lib/i18n'
 
 /** Нижняя панель поверх экрана. */
 export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -13,7 +14,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
       <div className="sheet" role="dialog" aria-modal aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="sheet__head">
           <h2>{title}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="Закрыть">
+          <button className="icon-btn" onClick={onClose} aria-label={tr('Закрыть')}>
             <CloseIcon />
           </button>
         </div>
@@ -45,7 +46,7 @@ export function ConfirmSheet({
           {action}
         </button>
         <button className="btn btn--ghost btn--wide" onClick={onClose}>
-          Отмена
+          {tr('Отмена')}
         </button>
       </div>
     </Sheet>

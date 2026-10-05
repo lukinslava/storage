@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useData } from '../lib/data'
 import type { ArtworkKind, ArtworkMeta } from '../lib/types'
+import { tr } from '../lib/i18n'
 
 interface Props {
   kind: ArtworkKind
@@ -25,17 +26,17 @@ export function ArtworkForm({ kind, initial, submitLabel, busy, onSubmit, extra 
   return (
     <form className="form" onSubmit={submit}>
       <label className="field">
-        <span>{kind === 'drawing' ? 'Что нарисовано' : 'Что за поделка'}</span>
+        <span>{tr(kind === 'drawing' ? 'Что нарисовано' : 'Что за поделка')}</span>
         <input
           value={meta.title}
           onChange={(e) => set('title', e.target.value)}
-          placeholder={kind === 'drawing' ? 'Котик на траве' : 'Замок из пластилина'}
+          placeholder={tr(kind === 'drawing' ? 'Котик на траве' : 'Замок из пластилина')}
           maxLength={120}
         />
       </label>
 
       <div className="field">
-        <span>Чья работа</span>
+        <span>{tr('Чья работа')}</span>
         <div className="segmented" role="radiogroup">
           {children.map((c) => (
             <button
@@ -56,20 +57,20 @@ export function ArtworkForm({ kind, initial, submitLabel, busy, onSubmit, extra 
             className={'seg' + (meta.child_id === null ? ' seg--on' : '')}
             onClick={() => set('child_id', null)}
           >
-            Вместе
+            {tr('Вместе')}
           </button>
         </div>
       </div>
 
       <label className="field">
-        <span>Дата</span>
+        <span>{tr('Дата')}</span>
         <input type="date" value={meta.made_on} onChange={(e) => e.target.value && set('made_on', e.target.value)} required />
       </label>
 
       <label className="field">
-        <span>Коллекция</span>
+        <span>{tr('Коллекция')}</span>
         <select value={meta.collection_id ?? ''} onChange={(e) => set('collection_id', e.target.value || null)}>
-          <option value="">Без коллекции</option>
+          <option value="">{tr('Без коллекции')}</option>
           {collections.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -79,12 +80,12 @@ export function ArtworkForm({ kind, initial, submitLabel, busy, onSubmit, extra 
       </label>
 
       <label className="field">
-        <span>Заметка</span>
+        <span>{tr('Заметка')}</span>
         <textarea
           value={meta.notes}
           onChange={(e) => set('notes', e.target.value)}
           rows={2}
-          placeholder="Что рассказал автор"
+          placeholder={tr('Что рассказал автор')}
           maxLength={1000}
         />
       </label>
@@ -92,7 +93,7 @@ export function ArtworkForm({ kind, initial, submitLabel, busy, onSubmit, extra 
       {extra}
 
       <button className="btn btn--primary btn--wide" type="submit" disabled={busy}>
-        {busy ? 'Сохраняю…' : submitLabel}
+        {busy ? tr('Сохраняю…') : submitLabel}
       </button>
     </form>
   )
