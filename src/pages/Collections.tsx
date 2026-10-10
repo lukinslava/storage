@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderCard, FolderDefs, GhostFolder } from '../components/FolderCard'
+import { FolderCard, GhostFolder } from '../components/FolderCard'
 import { PlusIcon } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
 import { useData } from '../lib/data'
@@ -20,7 +20,6 @@ export function Collections() {
 
       {!loading && (
         <div className="folders">
-          <FolderDefs />
           {collections.map((c, i) => (
             <FolderCard key={c.id} collection={c} index={i} artworks={artworks.filter((a) => a.collection_id === c.id)} />
           ))}
