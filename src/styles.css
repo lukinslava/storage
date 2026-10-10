@@ -408,15 +408,15 @@ img { display: block; }
 
 .folders {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 30px;
-  padding: 28px 4px 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 34px 22px;
+  padding: 36px 4px 0;
 }
 
 .folder {
   position: relative;
   display: block;
-  aspect-ratio: 100 / 76;
+  aspect-ratio: 1 / 1.02;
   transform: rotate(var(--tilt, 0deg));
   transition: transform 0.2s ease;
 }
@@ -448,12 +448,12 @@ img { display: block; }
   filter: url(#folder-fuzz);
 }
 
-/* Задняя стенка с «ушком» (форму задаёт маска, см. FolderCard.tsx), пропорции 100 × 68. */
+/* Задняя стенка с «ушком» (форму задаёт маска, см. FolderCard.tsx), пропорции 100 × 94. */
 .folder__back {
   position: absolute;
   inset: auto 0 0;
   width: 100%;
-  aspect-ratio: 100 / 68;
+  aspect-ratio: 100 / 94;
   background-color: var(--fabric-dark);
   mask-size: 100% 100%;
   -webkit-mask-size: 100% 100%;
@@ -463,14 +463,14 @@ img { display: block; }
 
 .folder__papers {
   position: absolute;
-  inset: 0 9% 10%;
+  inset: 0 10% 10%;
 }
 
 .folder__paper {
   position: absolute;
   top: 0;
-  width: 34%;
-  height: 76%;
+  width: 50%;
+  height: 72%;
   background: #fff;
   border: 3px solid #fff;
   border-radius: 6px;
@@ -481,20 +481,20 @@ img { display: block; }
 .folder__paper img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
 .folder__paper--cutout { background: #fff; }
 .folder__paper--cutout img { object-fit: contain; padding: 6%; }
-.folder__paper--0 { left: 3%; top: 4%; transform: rotate(-4deg); z-index: 1; }
-.folder__paper--1 { left: 33%; top: 2%; transform: rotate(2deg); }
-.folder__paper--2 { left: 63%; top: 7%; transform: rotate(5deg); }
+.folder__paper--0 { left: 4%; top: 4%; transform: rotate(-4deg); z-index: 1; }
+.folder__paper--1 { left: 27%; top: 5%; transform: rotate(3deg); }
+.folder__paper--2 { left: 50%; top: 10%; transform: rotate(6deg); }
 
 /* Пустая папка: просто белые листы, чуть выглядывают. */
-.folder__paper--blank { width: 100%; left: 0; top: 16%; transform: none; }
-.folder__paper--blank.folder__paper--1 { top: 20%; }
+.folder__paper--blank { width: 100%; left: 0; top: 18%; transform: none; }
+.folder__paper--blank.folder__paper--1 { top: 22%; }
 
 /* Передняя стенка — плотная ткань, листы за ней не видны. */
 .folder__front,
 .folder__label {
   position: absolute;
-  inset: 36% 0 0;
-  border-radius: 22px;
+  inset: 34% 0 0;
+  border-radius: 16px;
   z-index: 2;
 }
 
@@ -509,15 +509,15 @@ img { display: block; }
 .folder__label {
   display: flex;
   align-items: flex-end;
-  padding: 18px 20px;
+  padding: 14px;
   color: #fff;
 }
 
 .folder__face {
   position: absolute;
-  top: 14%;
+  top: 16%;
   left: 50%;
-  width: 22%;
+  width: 34%;
   transform: translateX(-50%);
 }
 
@@ -525,7 +525,7 @@ img { display: block; }
   min-width: 0;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
   font-weight: 500;
-  font-size: 20px;
+  font-size: 15px;
   line-height: 1.2;
   /* Длинное название переносится по словам (до двух строк), а не обрезается. */
   overflow-wrap: break-word;
@@ -538,17 +538,17 @@ img { display: block; }
 
 .folder__count {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
   display: grid;
   place-items: center;
-  min-width: 34px;
-  height: 34px;
-  padding: 0 8px;
-  border-radius: 17px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 14px;
   background: #fff;
   color: var(--tint-strong);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -1037,6 +1037,7 @@ img { display: block; }
 .page--login .form { text-align: left; }
 
 @media (min-width: 700px) {
+  .folders { gap: 44px 34px; }
   .grid { grid-template-columns: repeat(3, 1fr); }
 }
 

@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom'
 import { useFileUrl } from '../lib/data'
 import { isCutout, type Artwork, type Collection, type Tint } from '../lib/types'
 
-// Задняя стенка папки с «ушком» слева, в единицах ширины папки (100 × 68).
+// Задняя стенка папки с «ушком» слева, в единицах ширины папки (100 × 94).
 // Пропорции стенки заданы в CSS (aspect-ratio папки и отступ сверху), поэтому
 // растянутая без сохранения пропорций маска не искажает скругления.
-const BACK = 'M0 7Q0 0 7 0L24 0C29 0 30 6 35 6L94 6Q100 6 100 12L100 62Q100 68 94 68L6 68Q0 68 0 62Z'
+const BACK = 'M0 9Q0 0 9 0L31 0C37 0 38 7 44 7L91 7Q100 7 100 16L100 85Q100 94 91 94L9 94Q0 94 0 85Z'
 const BACK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 68' preserveAspectRatio='none'><path d='${BACK}'/></svg>`,
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94' preserveAspectRatio='none'><path d='${BACK}'/></svg>`,
 )}")`
 
 /** Фильтр «ворс»: слегка лохматит края ткани. Рисуется один раз на странице. */
@@ -83,7 +83,7 @@ export function FolderCard({ collection, artworks, index }: { collection: Collec
     <Link
       to={`/collections/${collection.id}`}
       className={`folder tint-${collection.color}`}
-      style={{ ['--tilt' as string]: `${index % 2 ? 1 : -1}deg` }}
+      style={{ ['--tilt' as string]: `${index % 2 ? 2 : -2}deg` }}
     >
       <FabricFolder
         index={index}
@@ -99,7 +99,7 @@ export function FolderCard({ collection, artworks, index }: { collection: Collec
 /** Бледная папка-заглушка, пока коллекций нет. */
 export function GhostFolder({ tint, index }: { tint: Tint; index: number }) {
   return (
-    <div className={`folder folder--ghost tint-${tint}`} style={{ ['--tilt' as string]: `${index % 2 ? 1 : -1}deg` }}>
+    <div className={`folder folder--ghost tint-${tint}`} style={{ ['--tilt' as string]: `${index % 2 ? 2 : -2}deg` }}>
       <FabricFolder index={index} papers={[0, 1].map((i) => <BlankPaper key={i} i={i} />)} />
     </div>
   )
