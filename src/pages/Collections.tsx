@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FolderCard } from '../components/FolderCard'
+import { FolderCard, GhostFolder } from '../components/FolderCard'
 import { PlusIcon } from '../components/Icons'
 import { Sheet } from '../components/Sheet'
 import { useData } from '../lib/data'
@@ -25,12 +25,8 @@ export function Collections() {
           ))}
           {collections.length === 0 && (
             <>
-              <div className="folder folder--ghost tint-pink" style={{ ['--tilt' as string]: '-2.5deg' }}>
-                <span className="folder__pocket" />
-              </div>
-              <div className="folder folder--ghost tint-green" style={{ ['--tilt' as string]: '2.5deg' }}>
-                <span className="folder__pocket" />
-              </div>
+              <GhostFolder tint="pink" index={0} />
+              <GhostFolder tint="green" index={1} />
             </>
           )}
         </div>
