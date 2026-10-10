@@ -434,28 +434,18 @@ img { display: block; }
   z-index: -1;
 }
 
-/* Кожзам: цвет коллекции, насыщеннее пастельного; мелкая зернистость и мягкий блик. */
+/* Ворсистая ткань: цвет коллекции, насыщеннее пастельного. */
 .folder {
   --fabric: color-mix(in srgb, var(--tint-strong) 62%, var(--tint));
   --fabric-dark: color-mix(in srgb, var(--tint-strong) 82%, #000 6%);
-  --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.5'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeDiffuseLighting%20surfaceScale='1.6'%20lighting-color='%23fff'%3E%3CfeDistantLight%20azimuth='225'%20elevation='60'/%3E%3C/feDiffuseLighting%3E%3CfeColorMatrix%20values='0%200%200%200%200%200%200%200%200%200%200%200%200%200%200%20-0.42%200%200%200%200.4'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url%28%23n%29'/%3E%3C/svg%3E");
+  --fuzz: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 0.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 -0.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .folder__back,
 .folder__front {
-  background-image:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.12)),
-    var(--grain);
-  background-size: 100% 100%, 120px 120px;
-}
-
-/* Строчка по краю передней стенки. */
-.folder__front::before {
-  content: '';
-  position: absolute;
-  inset: 7px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.55);
-  border-radius: 11px;
+  background-image: var(--fuzz);
+  background-size: 160px 160px;
+  filter: url(#folder-fuzz);
 }
 
 /* Задняя стенка с «ушком» (форму задаёт маска, см. FolderCard.tsx), пропорции 100 × 94. */
@@ -511,9 +501,9 @@ img { display: block; }
 .folder__front {
   background-color: var(--fabric);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.18),
-    0 8px 18px rgba(0, 0, 0, 0.14);
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.12),
+    0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
 .folder__label {

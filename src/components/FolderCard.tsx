@@ -11,6 +11,18 @@ const BACK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
   `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94' preserveAspectRatio='none'><path d='${BACK}'/></svg>`,
 )}")`
 
+/** Фильтр «ворс»: слегка лохматит края ткани. Рисуется один раз на странице. */
+export function FolderDefs() {
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+      <filter id="folder-fuzz" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" />
+        <feDisplacementMap in="SourceGraphic" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+  )
+}
+
 function Paper({ art, i }: { art: Artwork; i: number }) {
   const url = useFileUrl(art.thumb_path)
   return (
@@ -50,8 +62,8 @@ function Face({ kind }: { kind: (typeof FACES)[number] }) {
   )
 }
 
-/** Папка из кожзама: задняя стенка с «ушком», листы внутри, передняя стенка с рожицей. */
-function LeatherFolder({ papers, index, children }: { papers: ReactNode; index: number; children?: ReactNode }) {
+/** Папка из ворсистой ткани: задняя стенка с «ушком», листы внутри, передняя стенка с рожицей. */
+function FabricFolder({ papers, index, children }: { papers: ReactNode; index: number; children?: ReactNode }) {
   return (
     <>
       <span className="folder__back" style={{ maskImage: BACK_MASK, WebkitMaskImage: BACK_MASK }} />
@@ -73,13 +85,13 @@ export function FolderCard({ collection, artworks, index }: { collection: Collec
       className={`folder tint-${collection.color}`}
       style={{ ['--tilt' as string]: `${index % 2 ? 2 : -2}deg` }}
     >
-      <LeatherFolder
+      <FabricFolder
         index={index}
         papers={top.length ? top.map((a, i) => <Paper key={a.id} art={a} i={i} />) : [0, 1].map((i) => <BlankPaper key={i} i={i} />)}
       >
         <span className="folder__name">{collection.name}</span>
         <span className="folder__count">{artworks.length}</span>
-      </LeatherFolder>
+      </FabricFolder>
     </Link>
   )
 }
@@ -88,7 +100,7 @@ export function FolderCard({ collection, artworks, index }: { collection: Collec
 export function GhostFolder({ tint, index }: { tint: Tint; index: number }) {
   return (
     <div className={`folder folder--ghost tint-${tint}`} style={{ ['--tilt' as string]: `${index % 2 ? 2 : -2}deg` }}>
-      <LeatherFolder index={index} papers={[0, 1].map((i) => <BlankPaper key={i} i={i} />)} />
+      <FabricFolder index={index} papers={[0, 1].map((i) => <BlankPaper key={i} i={i} />)} />
     </div>
   )
 }
