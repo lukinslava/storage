@@ -3,13 +3,25 @@ import { Link } from 'react-router-dom'
 import { useFileUrl } from '../lib/data'
 import { isCutout, type Artwork, type Collection, type Tint } from '../lib/types'
 
-// Передняя стенка папки с «ушком» слева, в единицах ширины папки (100 × 66).
+// Задняя стенка папки с «ушком» слева, в единицах ширины папки (100 × 94).
 // Пропорции стенки заданы в CSS (aspect-ratio папки и отступ сверху), поэтому
-// растянутая без сохранения пропорций картинка не искажает скругления.
-const FRONT = 'M0 7Q0 0 7 0L46 0C52 0 53 9 60 9L93 9Q100 9 100 16L100 59Q100 66 93 66L7 66Q0 66 0 59Z'
-const FRONT_MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 66' preserveAspectRatio='none'><path d='${FRONT}'/></svg>`,
+// растянутая без сохранения пропорций маска не искажает скругления.
+const BACK = 'M0 9Q0 0 9 0L31 0C37 0 38 7 44 7L91 7Q100 7 100 16L100 85Q100 94 91 94L9 94Q0 94 0 85Z'
+const BACK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94' preserveAspectRatio='none'><path d='${BACK}'/></svg>`,
 )}")`
+
+/** Фильтр «ворс»: слегка лохматит края ткани. Рисуется один раз на странице. */
+export function FolderDefs() {
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+      <filter id="folder-fuzz" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" />
+        <feDisplacementMap in="SourceGraphic" scale="2.5" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+  )
+}
 
 function Paper({ art, i }: { art: Artwork; i: number }) {
   const url = useFileUrl(art.thumb_path)
@@ -18,35 +30,49 @@ function Paper({ art, i }: { art: Artwork; i: number }) {
   )
 }
 
-/** Пустой листок со строчками — когда в папке ещё нет работ. */
+/** Пустой листок — когда в папке ещё нет работ. */
 function BlankPaper({ i }: { i: number }) {
+  return <span className={`folder__paper folder__paper--blank folder__paper--${i}`} />
+}
+
+const FACES = ['smile', 'sleepy', 'wow'] as const
+
+/** Рожица на папке: у соседних папок разное настроение. */
+function Face({ kind }: { kind: (typeof FACES)[number] }) {
   return (
-    <span className={`folder__paper folder__paper--blank folder__paper--${i}`}>
-      <i />
-      <i />
-      <i />
-    </span>
+    <svg className="folder__face" viewBox="0 0 60 36" aria-hidden="true">
+      {[18, 42].map((x) =>
+        kind === 'sleepy' ? (
+          <g key={x}>
+            <path d={`M${x - 6.5} 11a6.5 8 0 0 0 13 0z`} fill="#fff" />
+            <ellipse cx={x} cy="14.5" rx="3.6" ry="3.4" fill="#1d1d1b" />
+            <path d={`M${x - 7.5} 11h15`} stroke="#1d1d1b" strokeWidth="1.8" strokeLinecap="round" />
+          </g>
+        ) : (
+          <g key={x}>
+            <ellipse cx={x} cy="12" rx="6.5" ry="9" fill="#fff" />
+            <ellipse cx={x + 1} cy="13" rx="3.6" ry="5.2" fill="#1d1d1b" />
+          </g>
+        ),
+      )}
+      {kind === 'smile' && <path d="M23 27q7 6 14 0" fill="none" stroke="#1d1d1b" strokeWidth="2.4" strokeLinecap="round" />}
+      {kind === 'sleepy' && <path d="M22 29h16" stroke="#1d1d1b" strokeWidth="2.2" strokeLinecap="round" />}
+      {kind === 'wow' && <ellipse cx="30" cy="29" rx="3.5" ry="4" fill="#1d1d1b" />}
+    </svg>
   )
 }
 
-/** Стеклянная папка: тёмная задняя стенка, листы внутри и матовая передняя стенка. */
-function GlassFolder({ papers, children }: { papers: ReactNode; children?: ReactNode }) {
+/** Папка из ворсистой ткани: задняя стенка с «ушком», листы внутри, передняя стенка с рожицей. */
+function FabricFolder({ papers, index, children }: { papers: ReactNode; index: number; children?: ReactNode }) {
   return (
     <>
-      <span className="folder__back" />
+      <span className="folder__back" style={{ maskImage: BACK_MASK, WebkitMaskImage: BACK_MASK }} />
       <span className="folder__papers">{papers}</span>
-      <span className="folder__front" style={{ maskImage: FRONT_MASK, WebkitMaskImage: FRONT_MASK }} />
-      <svg className="folder__glass" viewBox="0 0 100 66" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="folder-sheen" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
-            <stop offset="0.35" stopColor="#fff" stopOpacity="0.12" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={FRONT} fill="url(#folder-sheen)" stroke="#fff" strokeOpacity="0.8" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-      </svg>
-      {children && <span className="folder__label">{children}</span>}
+      <span className="folder__front" />
+      <span className="folder__label">
+        <Face kind={FACES[index % FACES.length]} />
+        {children}
+      </span>
     </>
   )
 }
@@ -59,12 +85,13 @@ export function FolderCard({ collection, artworks, index }: { collection: Collec
       className={`folder tint-${collection.color}`}
       style={{ ['--tilt' as string]: `${index % 2 ? 2 : -2}deg` }}
     >
-      <GlassFolder
+      <FabricFolder
+        index={index}
         papers={top.length ? top.map((a, i) => <Paper key={a.id} art={a} i={i} />) : [0, 1].map((i) => <BlankPaper key={i} i={i} />)}
       >
         <span className="folder__name">{collection.name}</span>
         <span className="folder__count">{artworks.length}</span>
-      </GlassFolder>
+      </FabricFolder>
     </Link>
   )
 }
@@ -73,7 +100,7 @@ export function FolderCard({ collection, artworks, index }: { collection: Collec
 export function GhostFolder({ tint, index }: { tint: Tint; index: number }) {
   return (
     <div className={`folder folder--ghost tint-${tint}`} style={{ ['--tilt' as string]: `${index % 2 ? 2 : -2}deg` }}>
-      <GlassFolder papers={[0, 1].map((i) => <BlankPaper key={i} i={i} />)} />
+      <FabricFolder index={index} papers={[0, 1].map((i) => <BlankPaper key={i} i={i} />)} />
     </div>
   )
 }

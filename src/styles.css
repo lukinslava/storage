@@ -434,18 +434,36 @@ img { display: block; }
   z-index: -1;
 }
 
-/* Задняя стенка: тот же цвет, только гуще и темнее. */
+/* Ворсистая ткань: цвет коллекции, насыщеннее пастельного. */
+.folder {
+  --fabric: color-mix(in srgb, var(--tint-strong) 62%, var(--tint));
+  --fabric-dark: color-mix(in srgb, var(--tint-strong) 82%, #000 6%);
+  --fuzz: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.9 0.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 -0.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.folder__back,
+.folder__front {
+  background-image: var(--fuzz);
+  background-size: 160px 160px;
+  filter: url(#folder-fuzz);
+}
+
+/* Задняя стенка с «ушком» (форму задаёт маска, см. FolderCard.tsx), пропорции 100 × 94. */
 .folder__back {
   position: absolute;
-  inset: 13% 4% 1%;
-  border-radius: 16px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tint-strong) 70%, #fff), var(--tint-strong));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  inset: auto 0 0;
+  width: 100%;
+  aspect-ratio: 100 / 94;
+  background-color: var(--fabric-dark);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
 }
 
 .folder__papers {
   position: absolute;
-  inset: 4% 11% 8%;
+  inset: 0 10% 10%;
 }
 
 .folder__paper {
@@ -456,57 +474,56 @@ img { display: block; }
   background: #fff;
   border: 3px solid #fff;
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
 .folder__paper img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; }
 .folder__paper--cutout { background: #fff; }
 .folder__paper--cutout img { object-fit: contain; padding: 6%; }
-.folder__paper--0 { left: 0; transform: rotate(-4deg); z-index: 1; }
-.folder__paper--1 { left: 27%; top: 6%; transform: rotate(3deg); }
-.folder__paper--2 { left: 50%; top: 12%; transform: rotate(7deg); }
+.folder__paper--0 { left: 4%; top: 4%; transform: rotate(-4deg); z-index: 1; }
+.folder__paper--1 { left: 27%; top: 5%; transform: rotate(3deg); }
+.folder__paper--2 { left: 50%; top: 10%; transform: rotate(6deg); }
 
-/* Пустой листок: серые строчки, как на бумаге. */
-.folder__paper--blank { padding: 14% 12%; display: flex; flex-direction: column; gap: 10%; }
-.folder__paper--blank i { display: block; height: 7%; border-radius: 4px; background: #e2e1dc; }
-.folder__paper--blank i:first-child { width: 80%; height: 10%; background: #d4d3cd; }
-.folder__paper--blank i:last-child { width: 60%; }
+/* Пустая папка: просто белые листы, чуть выглядывают. */
+.folder__paper--blank { width: 100%; left: 0; top: 18%; transform: none; }
+.folder__paper--blank.folder__paper--1 { top: 22%; }
 
-/* Передняя стенка — матовое цветное стекло, листы просвечивают сквозь неё.
-   Форму с «ушком» задаёт маска (см. FolderCard.tsx); пропорции стенки 100 × 66. */
+/* Передняя стенка — плотная ткань, листы за ней не видны. */
 .folder__front,
-.folder__glass,
 .folder__label {
   position: absolute;
-  inset: auto 0 0;
-  width: 100%;
-  aspect-ratio: 100 / 66;
+  inset: 34% 0 0;
+  border-radius: 16px;
   z-index: 2;
 }
 
 .folder__front {
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.06), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.06)),
-    color-mix(in srgb, var(--tint) 50%, transparent);
-  backdrop-filter: blur(7px) saturate(1.3);
-  -webkit-backdrop-filter: blur(7px) saturate(1.3);
-  mask-size: 100% 100%;
-  -webkit-mask-size: 100% 100%;
-  mask-repeat: no-repeat;
-  -webkit-mask-repeat: no-repeat;
+  background-color: var(--fabric);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.12),
+    0 8px 18px rgba(0, 0, 0, 0.12);
 }
-
-.folder__glass { display: block; overflow: visible; pointer-events: none; }
 
 .folder__label {
   display: flex;
   align-items: flex-end;
-  padding: 16px 14px;
+  padding: 14px;
+  color: #fff;
+}
+
+.folder__face {
+  position: absolute;
+  top: 16%;
+  left: 50%;
+  width: 34%;
+  transform: translateX(-50%);
 }
 
 .folder__name {
   min-width: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
   font-weight: 500;
   font-size: 15px;
   line-height: 1.2;
@@ -521,7 +538,7 @@ img { display: block; }
 
 .folder__count {
   position: absolute;
-  top: 22%;
+  top: 12px;
   right: 12px;
   display: grid;
   place-items: center;
@@ -529,8 +546,8 @@ img { display: block; }
   height: 28px;
   padding: 0 6px;
   border-radius: 14px;
-  background: var(--tint-strong);
-  color: #fff;
+  background: #fff;
+  color: var(--tint-strong);
   font-size: 14px;
   font-weight: 500;
 }
